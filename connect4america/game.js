@@ -793,6 +793,13 @@ document.getElementById('openLobbyBtn').addEventListener('click', () => {
   lobbyModal.style.display = 'flex';
 });
 
+const closeLobbyBtn = document.getElementById('closeLobbyBtn');
+if (closeLobbyBtn) {
+  closeLobbyBtn.addEventListener('click', () => {
+    lobbyModal.style.display = 'none';
+  });
+}
+
 // Start AI Match
 document.getElementById('startAIBtn').addEventListener('click', () => {
   const nick = document.getElementById('nicknameInput').value.trim() || 'Conductor-1';

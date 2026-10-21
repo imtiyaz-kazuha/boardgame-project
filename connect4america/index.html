@@ -305,7 +305,7 @@
       inset: 0;
       background: rgba(0,0,0,0.8);
       backdrop-filter: blur(10px);
-      z-index: 1000;
+      z-index: 10000;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -504,7 +504,8 @@
 
   <!-- Lobby & Matchmaking Modal -->
   <div id="lobbyModal" class="modal-overlay">
-    <div class="glass-panel modal-card">
+    <div class="glass-panel modal-card" style="position: relative;">
+      <button id="closeLobbyBtn" class="btn btn-secondary" style="position: absolute; top: 18px; right: 18px; padding: 4px 10px; font-size: 0.8rem;">✕ Close</button>
       <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px;">🎮 Game Setup</h2>
       <p style="font-size: 0.85rem; color: var(--text-muted);">
         Connect 4 America: Connect all key states with balanced Train, Road, Flight, and Joker mechanics!
