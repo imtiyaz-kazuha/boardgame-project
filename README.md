@@ -1,4 +1,4 @@
-# OmniBoard Digital Playground 🎲
+# Imtiboard Digital Playground 🎲
 
 A free, serverless, peer-to-peer web-based board game hub hosted directly via **GitHub Pages**.
 
