@@ -242,7 +242,7 @@ function initMap() {
       <i>Rule: 1 mode type per state per player!</i>
     `, { sticky: true });
 
-    line.on('click', () => handleClaimRoute(route.id));
+    line.on('click', () => handleRouteClick(route.id));
     polylines[route.id] = { line, defaultColor: primaryColor, defaultDash: dashStyle };
   });
 
@@ -345,31 +345,123 @@ function getAffordableMode(playerNum, route) {
   return null;
 }
 
-// Claim Route
-function handleClaimRoute(routeId) {
+// Smooth In-Game Toast (replaces intrusive browser alert dialogs)
+function showToast(title, desc, icon = 'ℹ️') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'toast-box';
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div style="flex:1;">
+      <div class="toast-title">${title}</div>
+      <div class="toast-desc">${desc}</div>
+    </div>
+  `;
+
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.classList.add('toast-show');
+  });
+
+  setTimeout(() => {
+    toast.classList.remove('toast-show');
+    setTimeout(() => toast.remove(), 350);
+  }, 3200);
+}
+
+// Open Route Placement Modal
+let pendingRouteId = null;
+
+function handleRouteClick(routeId) {
   if (state.gameOver) return;
 
   if (state.mode === 'p2p' && state.currentTurn !== state.myNum) {
-    alert("Wait for opponent's turn!");
+    showToast("Wait Your Turn", "It is currently your opponent's turn to play.", "⏳");
     return;
   }
   if (state.mode === 'ai' && state.currentTurn === 2) return;
 
   if (state.claimed[routeId]) {
-    alert("This transit route is already claimed!");
+    showToast("Route Taken", "This transit corridor is already claimed by an explorer.", "🚫");
     return;
   }
 
   const route = US_ROUTES.find(r => r.id === routeId);
-  const player = state.currentTurn;
-  const match = getAffordableMode(player, route);
+  const cityMap = {};
+  US_CITIES.forEach(c => cityMap[c.id] = c);
+  const from = cityMap[route.from];
+  const to = cityMap[route.to];
 
-  if (!match) {
-    alert(`Cannot claim! Either you lack tickets, or one of these states has reached its maximum shared capacity!`);
-    return;
+  pendingRouteId = routeId;
+  const player = state.currentTurn;
+  const tickets = player === 1 ? state.p1Tickets : state.p2Tickets;
+
+  // Check state capacity limits
+  const capFrom = (STATE_CAPACITIES[from.state] && STATE_CAPACITIES[from.state].totalSlots) || 2;
+  const capTo = (STATE_CAPACITIES[to.state] && STATE_CAPACITIES[to.state].totalSlots) || 2;
+  const usedFrom = (state.stateSlotClaims[from.state] || []).length;
+  const usedTo = (state.stateSlotClaims[to.state] || []).length;
+
+  const isFull = usedFrom >= capFrom || usedTo >= capTo;
+
+  // Open modal
+  const claimModal = document.getElementById('claimModal');
+  const title = document.getElementById('claimRouteTitle');
+  const sub = document.getElementById('claimRouteSub');
+  const options = document.getElementById('claimOptionsContainer');
+  const notice = document.getElementById('claimNotice');
+
+  title.textContent = `${from.name} (${from.state}) ↔ ${to.name} (${to.state})`;
+  sub.textContent = `Distance: ${route.km.toLocaleString()} km • Required Tickets: ${route.cost}x`;
+  options.innerHTML = '';
+
+  if (isFull) {
+    notice.textContent = `⚠️ Capacity limit reached in ${usedFrom >= capFrom ? from.state : to.state}! No more routes can connect here.`;
+  } else {
+    notice.textContent = '';
   }
 
-  // Deduct tickets
+  route.modes.forEach(mode => {
+    const regular = tickets[mode] || 0;
+    const jokers = tickets.joker || 0;
+    const canPay = (regular + jokers) >= route.cost;
+    const jokersNeeded = Math.max(0, route.cost - regular);
+
+    let modeIcon = '🚂 Train';
+    if (mode === 'road') modeIcon = '🚗 Road';
+    if (mode === 'flight') modeIcon = '✈️ Flight';
+
+    const btn = document.createElement('button');
+    btn.className = 'mode-select-btn';
+    btn.disabled = isFull || !canPay;
+    btn.style.opacity = (isFull || !canPay) ? '0.45' : '1';
+
+    let costDesc = `${route.cost}x ${mode}`;
+    if (jokersNeeded > 0) {
+      costDesc += ` (${regular}x ${mode} + ${jokersNeeded}x 🃏)`;
+    }
+
+    btn.innerHTML = `
+      <span>${modeIcon}</span>
+      <span style="font-size:0.8rem; font-weight:600; color:${canPay ? '#34d399' : '#ef4444'};">${costDesc}</span>
+    `;
+
+    btn.addEventListener('click', () => {
+      confirmClaimRoute(routeId, mode, jokersNeeded);
+      claimModal.style.display = 'none';
+    });
+
+    options.appendChild(btn);
+  });
+
+  claimModal.style.display = 'flex';
+}
+
+function confirmClaimRoute(routeId, chosenMode, useJokers) {
+  const route = US_ROUTES.find(r => r.id === routeId);
+  const player = state.currentTurn;
   const tickets = player === 1 ? state.p1Tickets : state.p2Tickets;
   const cityMap = {};
   US_CITIES.forEach(c => cityMap[c.id] = c);
@@ -377,35 +469,38 @@ function handleClaimRoute(routeId) {
   const stateFrom = cityMap[route.from].state;
   const stateTo = cityMap[route.to].state;
 
-  // Spend tickets
-  const regularSpent = route.cost - match.useJokers;
-  tickets[match.mode] -= regularSpent;
-  if (match.useJokers > 0) {
-    tickets.joker -= match.useJokers;
+  // Deduct
+  const regularSpent = route.cost - useJokers;
+  tickets[chosenMode] -= regularSpent;
+  if (useJokers > 0) {
+    tickets.joker -= useJokers;
   }
 
-  // Record slot usage in shared pool
+  // Record slot claims
   if (!state.stateSlotClaims[stateFrom]) state.stateSlotClaims[stateFrom] = [];
   if (!state.stateSlotClaims[stateTo]) state.stateSlotClaims[stateTo] = [];
-  state.stateSlotClaims[stateFrom].push({ player, mode: match.mode });
-  state.stateSlotClaims[stateTo].push({ player, mode: match.mode });
+  state.stateSlotClaims[stateFrom].push({ player, mode: chosenMode });
+  state.stateSlotClaims[stateTo].push({ player, mode: chosenMode });
 
   // Claim
-  state.claimed[routeId] = { player, mode: match.mode };
+  state.claimed[routeId] = { player, mode: chosenMode };
+  const ptsEarned = Math.round(route.km / 80);
   if (player === 1) {
     state.p1Routes.push(routeId);
-    state.p1Score += Math.round(route.km / 80);
+    state.p1Score += ptsEarned;
   } else {
     state.p2Routes.push(routeId);
-    state.p2Score += Math.round(route.km / 80);
+    state.p2Score += ptsEarned;
   }
+
+  showToast("Route Established!", `${cityMap[route.from].name} to ${cityMap[route.to].name} claimed (+${ptsEarned} pts)!`, "🚂");
 
   updateStateCounts();
   checkMissions();
   renderCityPins();
   updateVisuals();
 
-  // Check Game End (All 20 States Connected by either side, or 20 state completion)
+  // Check Game End
   if (state.p1StatesCount >= 20 || state.p2StatesCount >= 20 || Object.keys(state.claimed).length >= US_ROUTES.length) {
     endGame(state.p1StatesCount >= state.p2StatesCount ? 1 : 2, "connected all key American states");
     return;
@@ -415,16 +510,19 @@ function handleClaimRoute(routeId) {
   state.currentTurn = state.currentTurn === 1 ? 2 : 1;
   updateUI();
 
-  // Sync P2P
   if (state.mode === 'p2p' && peerEngine) {
     peerEngine.send({ type: 'SYNC_STATE', state });
   }
 
-  // AI Turn
   if (state.mode === 'ai' && state.currentTurn === 2 && !state.gameOver) {
     setTimeout(playAITurn, 850);
   }
 }
+
+// Close claim modal button
+document.getElementById('closeClaimModalBtn').addEventListener('click', () => {
+  document.getElementById('claimModal').style.display = 'none';
+});
 
 // Calculate unique states connected by player
 function updateStateCounts() {
@@ -501,8 +599,8 @@ function checkMissions() {
 
   if (completedMissions.length > 0) {
     completedMissions.forEach(c => {
-      // Announce and remove from deck
-      alert(`🎯 QUEST COMPLETED!\n\n${c.winner} completed: "${c.mission.name}" (+${c.mission.pts} pts)!\nThis objective has vanished from the board!`);
+      // Announce with smooth in-game toast (no annoying browser alert modal)
+      showToast("🎯 QUEST COMPLETED!", `${c.winner} completed: "${c.mission.name}" (+${c.mission.pts} pts)! Vanished from board!`, "🏆");
       state.activeMissions = state.activeMissions.filter(m => m.id !== c.mission.id);
       state.completedLog.push(c);
     });
@@ -566,8 +664,8 @@ function updateUI() {
     p1Box.classList.remove('active-p1');
   }
 
-  // Turn indicator neon glow update
-  updateTurnNeonBorder();
+  // Turn indicator update
+  updateTurnIndicator();
 
   // Display tickets in hand
   const currentTickets = (state.mode === 'p2p' && state.myNum === 2) ? state.p2Tickets : state.p1Tickets;
@@ -593,13 +691,15 @@ function updateUI() {
   });
 }
 
-function updateTurnNeonBorder() {
-  const neon = document.getElementById('screenNeon');
+function updateTurnIndicator() {
   const isMyTurn = (state.mode === 'ai' && state.currentTurn === 1) || (state.mode === 'p2p' && state.currentTurn === state.myNum);
-  if (isMyTurn && !state.gameOver) {
-    neon.classList.add('neon-on');
-  } else {
-    neon.classList.remove('neon-on');
+  const turnPill = document.getElementById('turnPill');
+  if (turnPill) {
+    if (isMyTurn && !state.gameOver) {
+      turnPill.style.boxShadow = '0 0 12px rgba(34, 197, 94, 0.6)';
+    } else {
+      turnPill.style.boxShadow = 'none';
+    }
   }
 }
 
@@ -712,12 +812,14 @@ function drawRandomTickets(playerNum) {
 document.getElementById('drawTicketsBtn').addEventListener('click', () => {
   if (state.gameOver) return;
   if (state.mode === 'p2p' && state.currentTurn !== state.myNum) {
-    alert("Wait for opponent's turn!");
+    showToast("Wait Your Turn", "It is your opponent's turn to play.", "⏳");
     return;
   }
   if (state.mode === 'ai' && state.currentTurn === 2) return;
 
   drawRandomTickets(state.currentTurn);
+  showToast("Tickets Drawn!", "Added 2 transit tickets to your hand.", "🎫");
+
   state.currentTurn = state.currentTurn === 1 ? 2 : 1;
   updateUI();
 
