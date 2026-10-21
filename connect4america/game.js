@@ -44,31 +44,31 @@ const US_CITIES = [
   { id: 'boston', name: 'Boston', state: 'MA', lat: 42.3601, lng: -71.0589, hasAirport: false }
 ];
 
-// State Transit Capacities:
-// Major Hub States (CA, TX, NY, IL) support higher capacity (2 Trains, 2 Roads, 2 Flights)
-// Medium States (WA, GA, FL, CO, DC) support (1 Train, 1 Road, 1 Flight)
-// Smaller transit states (UT, NV, AZ, MO, TN, MI, LA, MA, MN) support (1 Train, 1 Road, 0 Flight)
+// State Total Shared Capacity Pools (Combined for Train, Road, and Flight!):
+// Mega Hubs: 4 total slots
+// Medium States: 3 total slots
+// Regional States: 2 total slots
 const STATE_CAPACITIES = {
-  'CA': { train: 2, road: 2, flight: 2, name: 'California (Mega Hub)' },
-  'TX': { train: 2, road: 2, flight: 2, name: 'Texas (Mega Hub)' },
-  'NY': { train: 2, road: 2, flight: 2, name: 'New York (Mega Hub)' },
-  'IL': { train: 2, road: 2, flight: 2, name: 'Illinois (Mega Hub)' },
+  'CA': { totalSlots: 4, name: 'California (Mega Hub)' },
+  'TX': { totalSlots: 4, name: 'Texas (Mega Hub)' },
+  'NY': { totalSlots: 4, name: 'New York (Mega Hub)' },
+  'IL': { totalSlots: 4, name: 'Illinois (Mega Hub)' },
 
-  'WA': { train: 1, road: 1, flight: 1, name: 'Washington' },
-  'GA': { train: 1, road: 1, flight: 1, name: 'Georgia' },
-  'FL': { train: 1, road: 1, flight: 1, name: 'Florida' },
-  'CO': { train: 1, road: 1, flight: 1, name: 'Colorado' },
-  'DC': { train: 1, road: 1, flight: 1, name: 'Washington D.C.' },
+  'WA': { totalSlots: 3, name: 'Washington' },
+  'GA': { totalSlots: 3, name: 'Georgia' },
+  'FL': { totalSlots: 3, name: 'Florida' },
+  'CO': { totalSlots: 3, name: 'Colorado' },
+  'DC': { totalSlots: 3, name: 'Washington D.C.' },
 
-  'NV': { train: 1, road: 1, flight: 1, name: 'Nevada' },
-  'MN': { train: 1, road: 1, flight: 1, name: 'Minnesota' },
-  'AZ': { train: 1, road: 2, flight: 0, name: 'Arizona' },
-  'UT': { train: 2, road: 1, flight: 0, name: 'Utah' },
-  'MO': { train: 1, road: 2, flight: 0, name: 'Missouri' },
-  'MI': { train: 1, road: 1, flight: 0, name: 'Michigan' },
-  'LA': { train: 1, road: 2, flight: 0, name: 'Louisiana' },
-  'TN': { train: 1, road: 2, flight: 0, name: 'Tennessee' },
-  'MA': { train: 1, road: 1, flight: 0, name: 'Massachusetts' }
+  'NV': { totalSlots: 2, name: 'Nevada' },
+  'MN': { totalSlots: 2, name: 'Minnesota' },
+  'AZ': { totalSlots: 2, name: 'Arizona' },
+  'UT': { totalSlots: 2, name: 'Utah' },
+  'MO': { totalSlots: 2, name: 'Missouri' },
+  'MI': { totalSlots: 2, name: 'Michigan' },
+  'LA': { totalSlots: 2, name: 'Louisiana' },
+  'TN': { totalSlots: 2, name: 'Tennessee' },
+  'MA': { totalSlots: 2, name: 'Massachusetts' }
 };
 
 // All distinct US states represented in the game
@@ -153,10 +153,7 @@ let state = {
   p1Routes: [],
   p2Routes: [],
   claimed: {}, // routeId -> { player: 1|2, usedMode: 'train'|'road'|'flight'|'joker' }
-  // State usage tracking: Each player can use each transit mode at most once in a given state!
-  // e.g. p1StateUsage['CA'] = ['train', 'flight']
-  p1StateUsage: {},
-  p2StateUsage: {},
+  stateSlotClaims: {}, // stateAbbr -> array of { player, mode }
   p1Tickets: { train: 3, road: 3, flight: 2, joker: 1 },
   p2Tickets: { train: 3, road: 3, flight: 2, joker: 1 },
   activeMissions: [], // Shared public quest board
@@ -249,55 +246,104 @@ function initMap() {
     polylines[route.id] = { line, defaultColor: primaryColor, defaultDash: dashStyle };
   });
 
-  // Render City Markers (Pins)
-  US_CITIES.forEach(city => {
-    const icon = L.divIcon({
-      className: 'city-pin',
-      html: `
-        <div class="pin-circle ${city.hasAirport ? 'has-airport' : ''}"></div>
-        <div class="pin-label">${city.name} (${city.state})${city.hasAirport ? ' ✈️' : ''}</div>
-      `,
-      iconSize: [80, 36],
-      iconAnchor: [40, 8]
-    });
-
-    const marker = L.marker([city.lat, city.lng], { icon: icon }).addTo(map);
-    marker.bindPopup(`
-      <b>${city.name}, ${city.state}</b><br>
-      ${city.hasAirport ? '✈️ <b>Major Airport Hub</b> (Supports Flights)' : '🚂 Overland Hub (Train / Road only)'}
-    `);
-    markers[city.id] = marker;
-  });
+  // Render City Markers (Pins) with Live Capacity Pips
+  renderCityPins();
 
   // Highlight border of map when turn is active
   updateTurnNeonBorder();
 }
 
-// Check player ticket affordability and state capacity rule
+function renderCityPins() {
+  US_CITIES.forEach(city => {
+    const totalSlots = (STATE_CAPACITIES[city.state] && STATE_CAPACITIES[city.state].totalSlots) || 2;
+    const p1Slots = (state.stateSlotClaims[city.state] || []).filter(c => c.player === 1).length;
+    const p2Slots = (state.stateSlotClaims[city.state] || []).filter(c => c.player === 2).length;
+    const totalUsed = p1Slots + p2Slots;
+    const isFull = totalUsed >= totalSlots;
+
+    // Build pips HTML
+    let pipsHtml = '';
+    for (let i = 0; i < totalSlots; i++) {
+      let pipClass = 'slot-pip';
+      if (i < p1Slots) {
+        pipClass += ' pip-p1';
+      } else if (i < p1Slots + p2Slots) {
+        pipClass += ' pip-p2';
+      }
+      pipsHtml += `<div class="${pipClass}"></div>`;
+    }
+
+    const iconHtml = `
+      <div class="pin-circle ${city.hasAirport ? 'has-airport' : ''} ${isFull ? 'pin-full' : ''}"></div>
+      <div class="pin-label">
+        <span>${city.name} (${city.state})${city.hasAirport ? ' ✈️' : ''}</span>
+        <div class="pin-pips-row">${pipsHtml}</div>
+      </div>
+    `;
+
+    if (markers[city.id]) {
+      const icon = L.divIcon({
+        className: 'city-pin',
+        html: iconHtml,
+        iconSize: [90, 42],
+        iconAnchor: [45, 8]
+      });
+      markers[city.id].setIcon(icon);
+      markers[city.id].setPopupContent(`
+        <b>${city.name}, ${city.state}</b><br>
+        Capacity: <b>${totalUsed} / ${totalSlots} Slots Used</b><br>
+        Status: <b>${isFull ? '🔒 FULL' : `${totalSlots - totalUsed} Open Slots`}</b><br>
+        ${city.hasAirport ? '✈️ Major Air Hub' : '🚂 Overland Hub'}
+      `);
+    } else {
+      const icon = L.divIcon({
+        className: 'city-pin',
+        html: iconHtml,
+        iconSize: [90, 42],
+        iconAnchor: [45, 8]
+      });
+      const marker = L.marker([city.lat, city.lng], { icon }).addTo(map);
+      marker.bindPopup(`
+        <b>${city.name}, ${city.state}</b><br>
+        Capacity: <b>${totalUsed} / ${totalSlots} Slots Used</b><br>
+        Status: <b>${isFull ? '🔒 FULL' : `${totalSlots - totalUsed} Open Slots`}</b><br>
+        ${city.hasAirport ? '✈️ Major Air Hub' : '🚂 Overland Hub'}
+      `);
+      markers[city.id] = marker;
+    }
+  });
+}
+
+// Check player ticket affordability and single shared state capacity rule
 function getAffordableMode(playerNum, route) {
   const tickets = playerNum === 1 ? state.p1Tickets : state.p2Tickets;
-  const usage = playerNum === 1 ? state.p1StateUsage : state.p2StateUsage;
 
   const cityMap = {};
   US_CITIES.forEach(c => cityMap[c.id] = c);
   const stateFrom = cityMap[route.from].state;
   const stateTo = cityMap[route.to].state;
 
+  const capFrom = (STATE_CAPACITIES[stateFrom] && STATE_CAPACITIES[stateFrom].totalSlots) || 2;
+  const capTo = (STATE_CAPACITIES[stateTo] && STATE_CAPACITIES[stateTo].totalSlots) || 2;
+
+  const usedFrom = (state.stateSlotClaims[stateFrom] || []).length;
+  const usedTo = (state.stateSlotClaims[stateTo] || []).length;
+
+  // If either state's shared capacity pool is full, no more connections can enter/exit!
+  if (usedFrom >= capFrom || usedTo >= capTo) {
+    return null;
+  }
+
   for (const mode of route.modes) {
-    // Check state capacities
-    const capFrom = (STATE_CAPACITIES[stateFrom] && STATE_CAPACITIES[stateFrom][mode] !== undefined) ? STATE_CAPACITIES[stateFrom][mode] : 1;
-    const capTo = (STATE_CAPACITIES[stateTo] && STATE_CAPACITIES[stateTo][mode] !== undefined) ? STATE_CAPACITIES[stateTo][mode] : 1;
-
-    const countFrom = (usage[stateFrom] || []).filter(m => m === mode).length;
-    const countTo = (usage[stateTo] || []).filter(m => m === mode).length;
-
-    if (countFrom >= capFrom || countTo >= capTo) {
-      continue; // Exceeds state's transit capacity for this mode
-    }
-
-    // Check if tickets or jokers cover the cost
     const regular = tickets[mode] || 0;
     const jokers = tickets.joker || 0;
+    if (regular + jokers >= route.cost) {
+      return { mode, useJokers: Math.max(0, route.cost - regular) };
+    }
+  }
+
+  return null;
+}
     if (regular + jokers >= route.cost) {
       return { mode, useJokers: Math.max(0, route.cost - regular) };
     }
@@ -326,13 +372,12 @@ function handleClaimRoute(routeId) {
   const match = getAffordableMode(player, route);
 
   if (!match) {
-    alert(`Cannot claim! Either you lack tickets, or you have already used that transportation type in one of these states (1 mode type per state rule)!`);
+    alert(`Cannot claim! Either you lack tickets, or one of these states has reached its maximum shared capacity!`);
     return;
   }
 
   // Deduct tickets
   const tickets = player === 1 ? state.p1Tickets : state.p2Tickets;
-  const usage = player === 1 ? state.p1StateUsage : state.p2StateUsage;
   const cityMap = {};
   US_CITIES.forEach(c => cityMap[c.id] = c);
 
@@ -346,11 +391,11 @@ function handleClaimRoute(routeId) {
     tickets.joker -= match.useJokers;
   }
 
-  // Record state mode consumption
-  if (!usage[stateFrom]) usage[stateFrom] = [];
-  if (!usage[stateTo]) usage[stateTo] = [];
-  usage[stateFrom].push(match.mode);
-  usage[stateTo].push(match.mode);
+  // Record slot usage in shared pool
+  if (!state.stateSlotClaims[stateFrom]) state.stateSlotClaims[stateFrom] = [];
+  if (!state.stateSlotClaims[stateTo]) state.stateSlotClaims[stateTo] = [];
+  state.stateSlotClaims[stateFrom].push({ player, mode: match.mode });
+  state.stateSlotClaims[stateTo].push({ player, mode: match.mode });
 
   // Claim
   state.claimed[routeId] = { player, mode: match.mode };
@@ -364,6 +409,7 @@ function handleClaimRoute(routeId) {
 
   updateStateCounts();
   checkMissions();
+  renderCityPins();
   updateVisuals();
 
   // Check Game End (All 20 States Connected by either side, or 20 state completion)
@@ -626,10 +672,10 @@ function playAITurn() {
     tickets[match.mode] -= regularSpent;
     if (match.useJokers > 0) tickets.joker -= match.useJokers;
 
-    if (!usage[stateFrom]) usage[stateFrom] = [];
-    if (!usage[stateTo]) usage[stateTo] = [];
-    usage[stateFrom].push(match.mode);
-    usage[stateTo].push(match.mode);
+    if (!state.stateSlotClaims[stateFrom]) state.stateSlotClaims[stateFrom] = [];
+    if (!state.stateSlotClaims[stateTo]) state.stateSlotClaims[stateTo] = [];
+    state.stateSlotClaims[stateFrom].push({ player: 2, mode: match.mode });
+    state.stateSlotClaims[stateTo].push({ player: 2, mode: match.mode });
 
     state.claimed[route.id] = { player: 2, mode: match.mode };
     state.p2Routes.push(route.id);
@@ -637,6 +683,7 @@ function playAITurn() {
 
     updateStateCounts();
     checkMissions();
+    renderCityPins();
     updateVisuals();
 
     if (state.p2StatesCount >= 20) {
@@ -860,8 +907,7 @@ function resetGameSession() {
   state.p2TotalKm = 0;
   state.p1StatesCount = 0;
   state.p2StatesCount = 0;
-  state.p1StateUsage = {};
-  state.p2StateUsage = {};
+  state.stateSlotClaims = {}; // stateAbbr -> array of { player, mode }
   state.currentTurn = 1;
   state.gameOver = false;
   state.p1Tickets = { train: 3, road: 3, flight: 2, joker: 1 };
