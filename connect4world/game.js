@@ -1,4 +1,18 @@
-// Major Global Capital and Important Cities with Real Lat/Lng
+// Target Circumnavigation of Earth in kilometers
+const EARTH_CIRCUMFERENCE_KM = 40075;
+
+// Haversine formula to calculate accurate great-circle distance between two GPS coordinates in km
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's mean radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
 const WORLD_CITIES = [
   // Europe
   { id: 'london', name: 'London', lat: 51.5074, lng: -0.1278, country: 'UK' },
@@ -101,8 +115,8 @@ let state = {
   p2Name: 'AI Explorer',
   p1Score: 0,
   p2Score: 0,
-  p1Span: 0, // Longitude coverage in degrees (0 to 360)
-  p2Span: 0,
+  p1TotalKm: 0, // Total accumulated route distance in km
+  p2TotalKm: 0,
   p1Routes: [],
   p2Routes: [],
   claimed: {}, // routeId -> playerNum
@@ -139,6 +153,13 @@ function initMap() {
   const cityMap = {};
   WORLD_CITIES.forEach(c => cityMap[c.id] = c);
 
+  // Precompute realistic distances for routes
+  WORLD_ROUTES.forEach(route => {
+    const from = cityMap[route.from];
+    const to = cityMap[route.to];
+    route.km = calculateHaversineDistance(from.lat, from.lng, to.lat, to.lng);
+  });
+
   // Render Routes
   WORLD_ROUTES.forEach(route => {
     const from = cityMap[route.from];
@@ -169,7 +190,7 @@ function initMap() {
       return m;
     }).join(' or ');
 
-    line.bindTooltip(`<b>${from.name} ↔ ${to.name}</b><br>Needs: ${route.cost}x [${modeIcons}]`, {
+    line.bindTooltip(`<b>${from.name} ↔ ${to.name}</b><br>Distance: <b>${route.km.toLocaleString()} km</b><br>Needs: ${route.cost}x [${modeIcons}]`, {
       sticky: true
     });
 
@@ -241,20 +262,20 @@ function handleClaimRoute(routeId) {
   state.claimed[routeId] = player;
   if (player === 1) {
     state.p1Routes.push(routeId);
-    state.p1Score += route.cost * 5;
+    state.p1Score += Math.round(route.km / 100);
   } else {
     state.p2Routes.push(routeId);
-    state.p2Score += route.cost * 5;
+    state.p2Score += Math.round(route.km / 100);
   }
 
-  // Recalculate longitude circumnavigation
+  // Recalculate total kilometers for circumnavigation
   updateCircumnavigation();
   checkMissions();
   updateVisuals();
 
-  // Check Game End Condition (Circumnavigation or Route exhaustion)
-  if (state.p1Span >= 360 || state.p2Span >= 360) {
-    endGame(state.p1Span >= 360 ? 1 : 2, "completed a full 360° global circumnavigation");
+  // Check Game End Condition: 40,075 km reached
+  if (state.p1TotalKm >= EARTH_CIRCUMFERENCE_KM || state.p2TotalKm >= EARTH_CIRCUMFERENCE_KM) {
+    endGame(state.p1TotalKm >= EARTH_CIRCUMFERENCE_KM ? 1 : 2, `reached ${EARTH_CIRCUMFERENCE_KM.toLocaleString()} km (Full Earth Circumnavigation)`);
     return;
   }
 
@@ -273,30 +294,21 @@ function handleClaimRoute(routeId) {
   }
 }
 
-// Compute circumnavigation coverage (span of connected longitude)
+// Compute circumnavigation coverage (sum of all claimed route distances in kilometers)
 function updateCircumnavigation() {
-  const cityMap = {};
-  WORLD_CITIES.forEach(c => cityMap[c.id] = c);
-
-  function getSpan(routeIds) {
-    if (routeIds.length === 0) return 0;
-    const lngs = [];
+  function getKm(routeIds) {
+    let sum = 0;
     routeIds.forEach(id => {
       const r = WORLD_ROUTES.find(x => x.id === id);
-      if (r) {
-        lngs.push(cityMap[r.from].lng, cityMap[r.to].lng);
+      if (r && r.km) {
+        sum += r.km;
       }
     });
-    if (lngs.length === 0) return 0;
-    const min = Math.min(...lngs);
-    const max = Math.max(...lngs);
-    // Span calculation with trans-pacific wrap
-    const diff = max - min;
-    return Math.min(360, Math.round(diff * 1.15));
+    return sum;
   }
 
-  state.p1Span = getSpan(state.p1Routes);
-  state.p2Span = getSpan(state.p2Routes);
+  state.p1TotalKm = getKm(state.p1Routes);
+  state.p2TotalKm = getKm(state.p2Routes);
 }
 
 // Check Secret Missions completion using BFS
@@ -370,15 +382,15 @@ function updateUI() {
   document.getElementById('labelP1').textContent = state.p1Name;
   document.getElementById('labelP2').textContent = state.p2Name;
 
-  document.getElementById('subP1').textContent = `Routes: ${state.p1Routes.length} • Span: ${state.p1Span}°`;
-  document.getElementById('subP2').textContent = `Routes: ${state.p2Routes.length} • Span: ${state.p2Span}°`;
+  document.getElementById('subP1').textContent = `Routes: ${state.p1Routes.length} • Distance: ${state.p1TotalKm.toLocaleString()} km`;
+  document.getElementById('subP2').textContent = `Routes: ${state.p2Routes.length} • Distance: ${state.p2TotalKm.toLocaleString()} km`;
 
   // Circumnavigation HUD
-  document.getElementById('hudP1Name').textContent = `${state.p1Name}: ${state.p1Span}° / 360°`;
-  document.getElementById('hudP2Name').textContent = `${state.p2Name}: ${state.p2Span}° / 360°`;
+  const p1Pct = Math.min(100, Math.round((state.p1TotalKm / EARTH_CIRCUMFERENCE_KM) * 100));
+  const p2Pct = Math.min(100, Math.round((state.p2TotalKm / EARTH_CIRCUMFERENCE_KM) * 100));
+  document.getElementById('hudP1Name').textContent = `${state.p1Name}: ${state.p1TotalKm.toLocaleString()} / ${EARTH_CIRCUMFERENCE_KM.toLocaleString()} km (${p1Pct}%)`;
+  document.getElementById('hudP2Name').textContent = `${state.p2Name}: ${state.p2TotalKm.toLocaleString()} / ${EARTH_CIRCUMFERENCE_KM.toLocaleString()} km (${p2Pct}%)`;
 
-  const p1Pct = Math.min(100, Math.round((state.p1Span / 360) * 100));
-  const p2Pct = Math.min(100, Math.round((state.p2Span / 360) * 100));
   document.getElementById('circP1Bar').style.width = `${p1Pct}%`;
   document.getElementById('circP2Bar').style.width = `${p2Pct}%`;
 
@@ -441,14 +453,14 @@ function playAITurn() {
     state.p2Tickets[mode] -= chosen.cost;
     state.claimed[chosen.id] = 2;
     state.p2Routes.push(chosen.id);
-    state.p2Score += chosen.cost * 5;
+    state.p2Score += Math.round(chosen.km / 100);
 
     updateCircumnavigation();
     checkMissions();
     updateVisuals();
 
-    if (state.p2Span >= 360) {
-      endGame(2, "completed a full 360° global circumnavigation");
+    if (state.p2TotalKm >= EARTH_CIRCUMFERENCE_KM) {
+      endGame(2, `reached ${EARTH_CIRCUMFERENCE_KM.toLocaleString()} km (Full Earth Circumnavigation)`);
       return;
     }
 
@@ -659,8 +671,8 @@ function resetGameSession() {
   state.p2Routes = [];
   state.p1Score = 0;
   state.p2Score = 0;
-  state.p1Span = 0;
-  state.p2Span = 0;
+  state.p1TotalKm = 0;
+  state.p2TotalKm = 0;
   state.currentTurn = 1;
   state.gameOver = false;
   state.p1Tickets = { train: 3, flight: 3, ferry: 2, road: 3 };
