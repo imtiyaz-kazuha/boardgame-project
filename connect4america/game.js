@@ -44,6 +44,33 @@ const US_CITIES = [
   { id: 'boston', name: 'Boston', state: 'MA', lat: 42.3601, lng: -71.0589, hasAirport: false }
 ];
 
+// State Transit Capacities:
+// Major Hub States (CA, TX, NY, IL) support higher capacity (2 Trains, 2 Roads, 2 Flights)
+// Medium States (WA, GA, FL, CO, DC) support (1 Train, 1 Road, 1 Flight)
+// Smaller transit states (UT, NV, AZ, MO, TN, MI, LA, MA, MN) support (1 Train, 1 Road, 0 Flight)
+const STATE_CAPACITIES = {
+  'CA': { train: 2, road: 2, flight: 2, name: 'California (Mega Hub)' },
+  'TX': { train: 2, road: 2, flight: 2, name: 'Texas (Mega Hub)' },
+  'NY': { train: 2, road: 2, flight: 2, name: 'New York (Mega Hub)' },
+  'IL': { train: 2, road: 2, flight: 2, name: 'Illinois (Mega Hub)' },
+
+  'WA': { train: 1, road: 1, flight: 1, name: 'Washington' },
+  'GA': { train: 1, road: 1, flight: 1, name: 'Georgia' },
+  'FL': { train: 1, road: 1, flight: 1, name: 'Florida' },
+  'CO': { train: 1, road: 1, flight: 1, name: 'Colorado' },
+  'DC': { train: 1, road: 1, flight: 1, name: 'Washington D.C.' },
+
+  'NV': { train: 1, road: 1, flight: 1, name: 'Nevada' },
+  'MN': { train: 1, road: 1, flight: 1, name: 'Minnesota' },
+  'AZ': { train: 1, road: 2, flight: 0, name: 'Arizona' },
+  'UT': { train: 2, road: 1, flight: 0, name: 'Utah' },
+  'MO': { train: 1, road: 2, flight: 0, name: 'Missouri' },
+  'MI': { train: 1, road: 1, flight: 0, name: 'Michigan' },
+  'LA': { train: 1, road: 2, flight: 0, name: 'Louisiana' },
+  'TN': { train: 1, road: 2, flight: 0, name: 'Tennessee' },
+  'MA': { train: 1, road: 1, flight: 0, name: 'Massachusetts' }
+};
+
 // All distinct US states represented in the game
 const TOTAL_GAME_STATES = Array.from(new Set(US_CITIES.map(c => c.state)));
 
@@ -132,8 +159,8 @@ let state = {
   p2StateUsage: {},
   p1Tickets: { train: 3, road: 3, flight: 2, joker: 1 },
   p2Tickets: { train: 3, road: 3, flight: 2, joker: 1 },
-  p1Missions: [],
-  p2Missions: [],
+  activeMissions: [], // Shared public quest board
+  completedLog: [],
   gameOver: false
 };
 
@@ -241,9 +268,12 @@ function initMap() {
     `);
     markers[city.id] = marker;
   });
+
+  // Highlight border of map when turn is active
+  updateTurnNeonBorder();
 }
 
-// Check player ticket affordability and state single-use rule
+// Check player ticket affordability and state capacity rule
 function getAffordableMode(playerNum, route) {
   const tickets = playerNum === 1 ? state.p1Tickets : state.p2Tickets;
   const usage = playerNum === 1 ? state.p1StateUsage : state.p2StateUsage;
@@ -254,12 +284,15 @@ function getAffordableMode(playerNum, route) {
   const stateTo = cityMap[route.to].state;
 
   for (const mode of route.modes) {
-    // Check state rule: Has this player already used this mode in stateFrom or stateTo?
-    const usedInFrom = (usage[stateFrom] || []).includes(mode);
-    const usedInTo = (usage[stateTo] || []).includes(mode);
+    // Check state capacities
+    const capFrom = (STATE_CAPACITIES[stateFrom] && STATE_CAPACITIES[stateFrom][mode] !== undefined) ? STATE_CAPACITIES[stateFrom][mode] : 1;
+    const capTo = (STATE_CAPACITIES[stateTo] && STATE_CAPACITIES[stateTo][mode] !== undefined) ? STATE_CAPACITIES[stateTo][mode] : 1;
 
-    if (usedInFrom || usedInTo) {
-      continue; // Disallowed by 1-mode-per-state rule
+    const countFrom = (usage[stateFrom] || []).filter(m => m === mode).length;
+    const countTo = (usage[stateTo] || []).filter(m => m === mode).length;
+
+    if (countFrom >= capFrom || countTo >= capTo) {
+      continue; // Exceeds state's transit capacity for this mode
     }
 
     // Check if tickets or jokers cover the cost
@@ -414,19 +447,27 @@ function checkMissions() {
     return false;
   };
 
-  state.p1Missions.forEach(m => {
-    if (!m.completed && checkConnected(m.from, m.to, state.p1Routes)) {
-      m.completed = true;
+  // Shared pool elimination: when a mission is achieved by either player, award points and vanish from deck!
+  const completedMissions = [];
+
+  state.activeMissions.forEach(m => {
+    if (checkConnected(m.from, m.to, state.p1Routes)) {
       state.p1Score += m.pts;
+      completedMissions.push({ mission: m, winner: state.p1Name });
+    } else if (checkConnected(m.from, m.to, state.p2Routes)) {
+      state.p2Score += m.pts;
+      completedMissions.push({ mission: m, winner: state.p2Name });
     }
   });
 
-  state.p2Missions.forEach(m => {
-    if (!m.completed && checkConnected(m.from, m.to, state.p2Routes)) {
-      m.completed = true;
-      state.p2Score += m.pts;
-    }
-  });
+  if (completedMissions.length > 0) {
+    completedMissions.forEach(c => {
+      // Announce and remove from deck
+      alert(`🎯 QUEST COMPLETED!\n\n${c.winner} completed: "${c.mission.name}" (+${c.mission.pts} pts)!\nThis objective has vanished from the board!`);
+      state.activeMissions = state.activeMissions.filter(m => m.id !== c.mission.id);
+      state.completedLog.push(c);
+    });
+  }
 }
 
 function updateVisuals() {
@@ -486,6 +527,9 @@ function updateUI() {
     p1Box.classList.remove('active-p1');
   }
 
+  // Turn indicator neon glow update
+  updateTurnNeonBorder();
+
   // Display tickets in hand
   const currentTickets = (state.mode === 'p2p' && state.myNum === 2) ? state.p2Tickets : state.p1Tickets;
   document.getElementById('cntTrain').textContent = currentTickets.train;
@@ -493,22 +537,32 @@ function updateUI() {
   document.getElementById('cntFlight').textContent = currentTickets.flight;
   document.getElementById('cntJoker').textContent = currentTickets.joker;
 
-  // Display Missions
+  // Display Shared Active Quests / Missions
   const missionsList = document.getElementById('missionsList');
   missionsList.innerHTML = '';
-  const myMissions = (state.mode === 'p2p' && state.myNum === 2) ? state.p2Missions : state.p1Missions;
-  myMissions.forEach(m => {
+  state.activeMissions.forEach(m => {
     const div = document.createElement('div');
-    div.className = `mission-item ${m.completed ? 'mission-complete' : ''}`;
+    div.className = 'mission-item';
     div.innerHTML = `
       <div style="display:flex; justify-content:space-between; font-weight:700;">
-        <span>${m.name}</span>
-        <span style="color:${m.completed ? '#34d399' : '#f59e0b'};">+${m.pts} pts ${m.completed ? '✓' : ''}</span>
+        <span>🎯 ${m.name}</span>
+        <span style="color:#f59e0b;">+${m.pts} pts</span>
       </div>
-      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${m.desc}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${m.desc} (First to connect claims & eliminates!)</div>
     `;
     missionsList.appendChild(div);
   });
+}
+
+function updateTurnNeonBorder() {
+  const neon = document.getElementById('screenNeon');
+  const isMyTurn = (state.mode === 'ai' && state.currentTurn === 1) || (state.mode === 'p2p' && state.currentTurn === state.myNum);
+  if (isMyTurn && !state.gameOver) {
+    neon.classList.add('neon-on');
+  } else {
+    neon.classList.remove('neon-on');
+  }
+}
 }
 
 // Adaptive Strategic AI
@@ -532,12 +586,10 @@ function playAITurn() {
     affordable.forEach(({ route, match }) => {
       let weight = route.km;
 
-      // Mission connection priority
-      state.p2Missions.forEach(m => {
-        if (!m.completed) {
-          if (route.from === m.from || route.to === m.from || route.from === m.to || route.to === m.to) {
-            weight += 6000;
-          }
+      // Mission connection priority: race to claim shared quest before human!
+      state.activeMissions.forEach(m => {
+        if (route.from === m.from || route.to === m.from || route.from === m.to || route.to === m.to) {
+          weight += 7500;
         }
       });
 
@@ -814,10 +866,11 @@ function resetGameSession() {
   state.gameOver = false;
   state.p1Tickets = { train: 3, road: 3, flight: 2, joker: 1 };
   state.p2Tickets = { train: 3, road: 3, flight: 2, joker: 1 };
+  state.completedLog = [];
 
+  // Deal 4 shared high-stakes quests on the board
   const shuffled = [...MISSIONS_POOL].sort(() => 0.5 - Math.random());
-  state.p1Missions = [shuffled[0], shuffled[1]].map(m => ({ ...m, completed: false }));
-  state.p2Missions = [shuffled[2], shuffled[3]].map(m => ({ ...m, completed: false }));
+  state.activeMissions = [shuffled[0], shuffled[1], shuffled[2], shuffled[3]];
 
   updateVisuals();
   updateUI();

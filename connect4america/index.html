@@ -39,6 +39,30 @@
       }
     }
 
+    /* Turn Indicator Neon Border Frame */
+    .turn-glow-active {
+      box-shadow: inset 0 0 35px rgba(34, 197, 94, 0.5), 0 0 25px rgba(34, 197, 94, 0.4) !important;
+      border: 2px solid #22c55e !important;
+      transition: all 0.4s ease;
+    }
+    .screen-neon-border {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      box-shadow: inset 0 0 45px rgba(34, 197, 94, 0.65), inset 0 0 15px rgba(34, 197, 94, 0.85);
+      border: 3px solid rgba(34, 197, 94, 0.6);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .neon-on {
+      opacity: 1;
+      animation: neonPulse 2s infinite ease-in-out;
+    }
+    @keyframes neonPulse {
+      0%, 100% { box-shadow: inset 0 0 35px rgba(34, 197, 94, 0.5), inset 0 0 15px rgba(34, 197, 94, 0.8); }
+      50% { box-shadow: inset 0 0 65px rgba(34, 197, 94, 0.85), inset 0 0 25px rgba(34, 197, 94, 1); }
+    }
     .map-wrapper {
       position: relative;
       border-radius: var(--radius-lg);
@@ -52,12 +76,13 @@
     #usMap {
       width: 100%;
       height: 100%;
-      background: #020617;
+      background: #0b1528;
       z-index: 1;
     }
 
+    /* Shaded relief tile styling */
     .leaflet-tile {
-      filter: saturate(1.2) contrast(1.1) brightness(0.85);
+      filter: saturate(1.15) contrast(1.1) brightness(0.9);
     }
     .leaflet-container {
       background: #020617 !important;
@@ -320,6 +345,7 @@
   </style>
 </head>
 <body>
+  <div id="screenNeon" class="screen-neon-border"></div>
   <div class="ambient-glow glow-1"></div>
   <div class="ambient-glow glow-2"></div>
 
