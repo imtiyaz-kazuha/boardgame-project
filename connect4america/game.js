@@ -224,10 +224,11 @@ function initMap() {
 
     const line = L.polyline(latlngs, {
       color: primaryColor,
-      weight: 5,
+      weight: 8, // Thicker stroke for easy clicking on mobile & desktop
       opacity: 0.85,
       dashArray: dashStyle,
-      interactive: true
+      interactive: true,
+      className: 'clickable-route'
     }).addTo(map);
 
     const modeList = route.modes.map(m => {
@@ -251,8 +252,8 @@ function initMap() {
   // Render City Markers (Pins) with Live Capacity Pips
   renderCityPins();
 
-  // Highlight border of map when turn is active
-  updateTurnNeonBorder();
+  // Highlight turn indicator when turn is active
+  updateTurnIndicator();
 }
 
 function renderCityPins() {

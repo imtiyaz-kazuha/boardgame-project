@@ -135,9 +135,15 @@
       margin-bottom: 8px;
       transition: all 0.2s;
     }
-    .mode-select-btn:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: var(--accent-cyan);
+    /* Clickable route styling for Leaflet SVG path */
+    .clickable-route {
+      cursor: pointer !important;
+      transition: stroke-width 0.15s ease, opacity 0.15s ease;
+    }
+    .clickable-route:hover {
+      stroke-width: 13px !important;
+      opacity: 1 !important;
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.7));
     }
     .map-wrapper {
       position: relative;
@@ -665,6 +671,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=2.3"></script>
+  <script src="game.js?v=2.4"></script>
 </body>
 </html>
