@@ -50,49 +50,53 @@ const WORLD_CITIES = [
 ];
 
 // Transit Modes allowed:
-// 'train', 'flight', 'ferry', 'road', 'any'
+// Primary mode sets color:
+// 'ferry' -> Blue (dotted)
+// 'flight' -> Red (solid)
+// 'train' -> Green (solid)
+// 'road' -> Yellow (solid)
 const WORLD_ROUTES = [
-  // Europe Cluster
-  { id: 'r_lon_par', from: 'london', to: 'paris', dist: 1, modes: ['train', 'flight', 'ferry'], cost: 1 },
-  { id: 'r_par_ber', from: 'paris', to: 'berlin', dist: 2, modes: ['train', 'road', 'flight'], cost: 2 },
-  { id: 'r_par_rom', from: 'paris', to: 'rome', dist: 2, modes: ['train', 'flight', 'road'], cost: 2 },
-  { id: 'r_ber_mos', from: 'berlin', to: 'moscow', dist: 3, modes: ['train', 'flight'], cost: 3 },
-  { id: 'r_rom_ist', from: 'rome', to: 'istanbul', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
-  { id: 'r_ist_mos', from: 'istanbul', to: 'moscow', dist: 2, modes: ['flight'], cost: 2 },
+  // Europe Railways, Motorways & Ferries
+  { id: 'r_lon_par', from: 'london', to: 'paris', dist: 1, primary: 'train', modes: ['train', 'ferry'], cost: 1 },
+  { id: 'r_par_ber', from: 'paris', to: 'berlin', dist: 2, primary: 'train', modes: ['train', 'road'], cost: 2 },
+  { id: 'r_par_rom', from: 'paris', to: 'rome', dist: 2, primary: 'road', modes: ['road', 'train'], cost: 2 },
+  { id: 'r_ber_mos', from: 'berlin', to: 'moscow', dist: 3, primary: 'train', modes: ['train'], cost: 3 },
+  { id: 'r_rom_ist', from: 'rome', to: 'istanbul', dist: 2, primary: 'ferry', modes: ['ferry', 'road'], cost: 2 },
+  { id: 'r_ist_mos', from: 'istanbul', to: 'moscow', dist: 2, primary: 'train', modes: ['train', 'road'], cost: 2 },
 
-  // Middle East & Africa
-  { id: 'r_ist_cai', from: 'istanbul', to: 'cairo', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
-  { id: 'r_cai_dub', from: 'cairo', to: 'dubai', dist: 2, modes: ['flight', 'road'], cost: 2 },
-  { id: 'r_cai_nai', from: 'cairo', to: 'nairobi', dist: 3, modes: ['flight'], cost: 3 },
-  { id: 'r_nai_cap', from: 'nairobi', to: 'capetown', dist: 3, modes: ['flight', 'road'], cost: 3 },
-  { id: 'r_dub_mum', from: 'dubai', to: 'mumbai', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
+  // Middle East & Africa Overland Highways & Ferries
+  { id: 'r_ist_cai', from: 'istanbul', to: 'cairo', dist: 2, primary: 'ferry', modes: ['ferry', 'road'], cost: 2 },
+  { id: 'r_cai_dub', from: 'cairo', to: 'dubai', dist: 2, primary: 'road', modes: ['road'], cost: 2 },
+  { id: 'r_cai_nai', from: 'cairo', to: 'nairobi', dist: 3, primary: 'road', modes: ['road'], cost: 3 },
+  { id: 'r_nai_cap', from: 'nairobi', to: 'capetown', dist: 3, primary: 'road', modes: ['road', 'train'], cost: 3 },
+  { id: 'r_dub_mum', from: 'dubai', to: 'mumbai', dist: 2, primary: 'ferry', modes: ['ferry', 'flight'], cost: 2 },
 
-  // Asia
-  { id: 'r_mos_bei', from: 'moscow', to: 'beijing', dist: 4, modes: ['train', 'flight'], cost: 4 },
-  { id: 'r_mum_ban', from: 'mumbai', to: 'bangkok', dist: 3, modes: ['flight', 'ferry'], cost: 3 },
-  { id: 'r_ban_sin', from: 'bangkok', to: 'singapore', dist: 2, modes: ['train', 'road', 'flight'], cost: 2 },
-  { id: 'r_bei_tok', from: 'beijing', to: 'tokyo', dist: 3, modes: ['flight', 'ferry'], cost: 3 },
-  { id: 'r_sin_syd', from: 'singapore', to: 'sydney', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
-  { id: 'r_tok_syd', from: 'tokyo', to: 'sydney', dist: 4, modes: ['flight'], cost: 4 },
-  { id: 'r_syd_auc', from: 'sydney', to: 'auckland', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
+  // Asia Trans-Siberian, Railways & Roadways
+  { id: 'r_mos_bei', from: 'moscow', to: 'beijing', dist: 4, primary: 'train', modes: ['train'], cost: 4 },
+  { id: 'r_mum_ban', from: 'mumbai', to: 'bangkok', dist: 3, primary: 'road', modes: ['road', 'train'], cost: 3 },
+  { id: 'r_ban_sin', from: 'bangkok', to: 'singapore', dist: 2, primary: 'train', modes: ['train', 'road'], cost: 2 },
+  { id: 'r_bei_tok', from: 'beijing', to: 'tokyo', dist: 3, primary: 'ferry', modes: ['ferry', 'flight'], cost: 3 },
+  { id: 'r_sin_syd', from: 'singapore', to: 'sydney', dist: 4, primary: 'flight', modes: ['flight', 'ferry'], cost: 4 },
+  { id: 'r_tok_syd', from: 'tokyo', to: 'sydney', dist: 4, primary: 'flight', modes: ['flight'], cost: 4 },
+  { id: 'r_syd_auc', from: 'sydney', to: 'auckland', dist: 2, primary: 'ferry', modes: ['ferry', 'flight'], cost: 2 },
 
-  // Pacific Trans-Oceanic Circumnavigation Bridge!
-  { id: 'r_tok_hono', from: 'tokyo', to: 'honolulu', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
-  { id: 'r_auc_hono', from: 'auckland', to: 'honolulu', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
-  { id: 'r_hono_la', from: 'honolulu', to: 'losangeles', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
+  // Pacific Trans-Oceanic Bridges
+  { id: 'r_tok_hono', from: 'tokyo', to: 'honolulu', dist: 4, primary: 'flight', modes: ['flight'], cost: 4 },
+  { id: 'r_auc_hono', from: 'auckland', to: 'honolulu', dist: 4, modes: ['flight'], primary: 'flight', cost: 4 },
+  { id: 'r_hono_la', from: 'honolulu', to: 'losangeles', dist: 4, primary: 'flight', modes: ['flight', 'ferry'], cost: 4 },
 
-  // Americas
-  { id: 'r_la_ny', from: 'losangeles', to: 'newyork', dist: 3, modes: ['train', 'road', 'flight'], cost: 3 },
-  { id: 'r_la_mex', from: 'losangeles', to: 'mexicocity', dist: 2, modes: ['road', 'flight'], cost: 2 },
-  { id: 'r_mex_bog', from: 'mexicocity', to: 'bogota', dist: 3, modes: ['flight'], cost: 3 },
-  { id: 'r_ny_bog', from: 'newyork', to: 'bogota', dist: 3, modes: ['flight'], cost: 3 },
-  { id: 'r_bog_rio', from: 'bogota', to: 'riodejaneiro', dist: 3, modes: ['flight', 'road'], cost: 3 },
-  { id: 'r_rio_bue', from: 'riodejaneiro', to: 'buenosaires', dist: 2, modes: ['train', 'road', 'flight'], cost: 2 },
+  // Americas Railways & Highways
+  { id: 'r_la_ny', from: 'losangeles', to: 'newyork', dist: 3, primary: 'train', modes: ['train', 'road'], cost: 3 },
+  { id: 'r_la_mex', from: 'losangeles', to: 'mexicocity', dist: 2, primary: 'road', modes: ['road', 'train'], cost: 2 },
+  { id: 'r_mex_bog', from: 'mexicocity', to: 'bogota', dist: 3, primary: 'road', modes: ['road', 'flight'], cost: 3 },
+  { id: 'r_ny_bog', from: 'newyork', to: 'bogota', dist: 3, primary: 'flight', modes: ['flight'], cost: 3 },
+  { id: 'r_bog_rio', from: 'bogota', to: 'riodejaneiro', dist: 3, primary: 'road', modes: ['road'], cost: 3 },
+  { id: 'r_rio_bue', from: 'riodejaneiro', to: 'buenosaires', dist: 2, primary: 'train', modes: ['train', 'road'], cost: 2 },
 
-  // Atlantic Trans-Oceanic Circumnavigation Bridge!
-  { id: 'r_ny_lon', from: 'newyork', to: 'london', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
-  { id: 'r_rio_cap', from: 'riodejaneiro', to: 'capetown', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
-  { id: 'r_rio_par', from: 'riodejaneiro', to: 'paris', dist: 4, modes: ['flight', 'ferry'], cost: 4 }
+  // Atlantic Trans-Oceanic Bridges
+  { id: 'r_ny_lon', from: 'newyork', to: 'london', dist: 4, primary: 'flight', modes: ['flight', 'ferry'], cost: 4 },
+  { id: 'r_rio_cap', from: 'riodejaneiro', to: 'capetown', dist: 4, primary: 'ferry', modes: ['ferry', 'flight'], cost: 4 },
+  { id: 'r_rio_par', from: 'riodejaneiro', to: 'paris', dist: 4, primary: 'flight', modes: ['flight'], cost: 4 }
 ];
 
 // Secret Missions
@@ -145,9 +149,10 @@ function initMap() {
     maxBounds: [[-85, -180], [85, 180]]
   });
 
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  // Use Esri World Physical / Shaded Relief Map to show biomes (deserts, forests, mountain terrain) without streets
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 8,
+    attribution: 'Tiles &copy; Esri &mdash; Source: US National Park Service'
   }).addTo(map);
 
   const cityMap = {};
@@ -167,32 +172,51 @@ function initMap() {
 
     const latlngs = [[from.lat, from.lng], [to.lat, to.lng]];
     
-    // Choose route color based on available modes
-    let color = '#94a3b8';
-    if (route.modes.includes('flight') && !route.modes.includes('train')) color = '#10b981';
-    if (route.modes.includes('ferry') && !route.modes.includes('flight')) color = '#0284c7';
-    if (route.modes.includes('train')) color = '#6366f1';
+    // Assign color and style based on primary transport mode:
+    // - Ferry: Blue Dotted
+    // - Flight: Red Solid
+    // - Train: Green Solid
+    // - Road: Yellow Solid
+    let color = '#facc15'; // Default Yellow Road
+    let dashArray = null;
+
+    if (route.primary === 'ferry') {
+      color = '#38bdf8'; // Blue
+      dashArray = '3, 6'; // Dotted line
+    } else if (route.primary === 'flight') {
+      color = '#ef4444'; // Red
+      dashArray = null;
+    } else if (route.primary === 'train') {
+      color = '#10b981'; // Green
+      dashArray = null;
+    } else if (route.primary === 'road') {
+      color = '#facc15'; // Yellow
+      dashArray = null;
+    }
 
     const line = L.polyline(latlngs, {
       color: color,
-      weight: 4,
-      opacity: 0.6,
-      dashArray: '6, 8',
+      weight: 5,
+      opacity: 0.85,
+      dashArray: dashArray,
       interactive: true
     }).addTo(map);
 
-    // Popup showing requirements
-    const modeIcons = route.modes.map(m => {
+    // Tooltip showing primary mode and all supported options
+    const supportedModesText = route.modes.map(m => {
       if (m === 'train') return '🚂 Train';
       if (m === 'flight') return '✈️ Flight';
       if (m === 'ferry') return '🚢 Ferry';
       if (m === 'road') return '🚗 Road';
       return m;
-    }).join(' or ');
+    }).join(' OR ');
 
-    line.bindTooltip(`<b>${from.name} ↔ ${to.name}</b><br>Distance: <b>${route.km.toLocaleString()} km</b><br>Needs: ${route.cost}x [${modeIcons}]`, {
-      sticky: true
-    });
+    line.bindTooltip(`
+      <b>${from.name} ↔ ${to.name}</b><br>
+      Distance: <b>${route.km.toLocaleString()} km</b><br>
+      Type: <b>${route.primary.toUpperCase()}</b><br>
+      Accepts: <b>${route.cost}x [${supportedModesText}]</b>
+    `, { sticky: true });
 
     line.on('click', () => handleClaimRoute(route.id));
     polylines[route.id] = line;
@@ -436,18 +460,46 @@ function updateUI() {
   });
 }
 
-// AI Engine
+// Strategic AI Globetrotter Engine
 function playAITurn() {
   if (state.gameOver || state.currentTurn !== 2) return;
 
-  // Check possible routes AI can afford
   const available = WORLD_ROUTES.filter(r => !state.claimed[r.id]);
   const affordable = available.filter(r => canAffordRoute(2, r) !== null);
 
+  // Score candidate routes based on:
+  // 1. Mission synergy (connects uncompleted mission cities)
+  // 2. High distance (km)
+  // 3. Efficient ticket usage
   if (affordable.length > 0) {
-    // Pick the most valuable route or a route that expands longitude span
-    affordable.sort((a, b) => b.cost - a.cost);
-    const chosen = affordable[0];
+    let bestRoute = null;
+    let highestScore = -Infinity;
+
+    affordable.forEach(route => {
+      let weight = route.km;
+
+      // Bonus weight if route touches AI's missions
+      state.p2Missions.forEach(m => {
+        if (!m.completed) {
+          if (route.from === m.from || route.to === m.from || route.from === m.to || route.to === m.to) {
+            weight += 8000;
+          }
+        }
+      });
+
+      // Prefer preserving versatile flight tickets when a train/road option exists
+      const preferredMode = canAffordRoute(2, route);
+      if (preferredMode === 'road' || preferredMode === 'train') {
+        weight += 1500;
+      }
+
+      if (weight > highestScore) {
+        highestScore = weight;
+        bestRoute = route;
+      }
+    });
+
+    const chosen = bestRoute || affordable[0];
     const mode = canAffordRoute(2, chosen);
 
     state.p2Tickets[mode] -= chosen.cost;
@@ -467,7 +519,7 @@ function playAITurn() {
     state.currentTurn = 1;
     updateUI();
   } else {
-    // Draw tickets
+    // Intelligently draw tickets
     drawRandomTickets(2);
     state.currentTurn = 1;
     updateUI();

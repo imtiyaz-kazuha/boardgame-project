@@ -217,9 +217,14 @@
             A strategic rail & route connection game inspired by Ticket to Ride mechanics! Claim trade pathways, complete secret destination tickets, and build the grandest continental rail network.
           </p>
         </div>
-        <a href="../connect4world/" class="btn btn-primary" style="width: 100%;">
-          Play Connect 4 World →
-        </a>
+        <div style="display: flex; gap: 8px;">
+          <a href="../connect4world/" class="btn btn-primary" style="flex: 2;">
+            Play Game →
+          </a>
+          <button id="rulesBtn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;" onclick="openRulesModal()">
+            📖 Rules
+          </button>
+        </div>
       </article>
 
       <!-- Game 2: Splendor (Anime Edition: Realm of Legend) -->
@@ -245,6 +250,64 @@
       </article>
     </section>
   </main>
+
+  <!-- Rules Modal -->
+  <div id="rulesModal" class="glass-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div class="glass-panel" style="width:100%; max-width:620px; max-height:85vh; overflow-y:auto; padding:28px; border-radius:var(--radius-lg); position:relative;">
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        📖 How to Play: Connect 4 World
+      </h2>
+      
+      <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎯 Objective</h4>
+          <p>Race against your opponent or AI to accumulate <strong>40,075 km</strong> (a full equatorial circumnavigation of Earth) by claiming international transit routes across the globe. The player with the most victory points wins when the threshold is hit!</p>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎫 Transit Tickets & Color Coding</h4>
+          <p>Routes are colored based on their primary transit mode:</p>
+          <ul style="padding-left:20px; margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+            <li><strong style="color:#10b981;">🟢 Green Lines:</strong> 🚂 Train Routes (Continental overland railways)</li>
+            <li><strong style="color:#facc15;">🟡 Yellow Lines:</strong> 🚗 Road & Highway Routes (Regional motorways)</li>
+            <li><strong style="color:#38bdf8;">🔵 Blue Dashed Lines:</strong> 🚢 Ferry Routes (Sea, maritime & canal crossings)</li>
+            <li><strong style="color:#ef4444;">🔴 Red Lines:</strong> ✈️ Flight Routes (Long-distance trans-oceanic airways)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎮 Turn Actions (Choose 1 per Turn)</h4>
+          <ol style="padding-left:20px; display:flex; flex-direction:column; gap:6px;">
+            <li><strong>Claim a Route:</strong> Click any unclaimed route that you can afford. Turn in the required matching tickets (e.g. 2x Train or 2x Road).</li>
+            <li><strong>Draw Tickets:</strong> Draw 2 random transit tickets to expand your hand.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">📜 Secret Expeditions (Missions)</h4>
+          <p>Each player begins with 2 secret contracts connecting distant world cities (e.g. London to Tokyo, New York to Paris). Connecting these endpoints awards large bonus points!</p>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🏆 Victory & Scoring</h4>
+          <p>Points are earned per kilometer built plus secret missions achieved. Whoever has the highest score when 40,075 km is circumnavigated wins!</p>
+        </section>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="closeRulesModal()">
+        Got it! Close Rules
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function openRulesModal() {
+      document.getElementById('rulesModal').style.display = 'flex';
+    }
+    function closeRulesModal() {
+      document.getElementById('rulesModal').style.display = 'none';
+    }
+  </script>
 
   <footer>
     <div class="container">
