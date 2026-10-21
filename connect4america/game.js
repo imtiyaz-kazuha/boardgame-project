@@ -757,8 +757,15 @@ function playAITurn() {
       // Bonus for expanding into new states
       const cityMap = {};
       US_CITIES.forEach(c => cityMap[c.id] = c);
-      const usedStates = Object.keys(state.p2StateUsage);
-      if (!usedStates.includes(cityMap[route.from].state) || !usedStates.includes(cityMap[route.to].state)) {
+      const claimedStates = new Set();
+      state.p2Routes.forEach(id => {
+        const r = US_ROUTES.find(x => x.id === id);
+        if (r) {
+          claimedStates.add(cityMap[r.from].state);
+          claimedStates.add(cityMap[r.to].state);
+        }
+      });
+      if (!claimedStates.has(cityMap[route.from].state) || !claimedStates.has(cityMap[route.to].state)) {
         weight += 3500;
       }
 
@@ -775,7 +782,6 @@ function playAITurn() {
 
     const { route, match } = best || affordable[0];
     const tickets = state.p2Tickets;
-    const usage = state.p2StateUsage;
     const cityMap = {};
     US_CITIES.forEach(c => cityMap[c.id] = c);
 
@@ -806,10 +812,12 @@ function playAITurn() {
       return;
     }
 
+    showToast("AI Move", `AI Conductor claimed route from ${cityMap[route.from].name} to ${cityMap[route.to].name}!`, "🤖");
     state.currentTurn = 1;
     updateUI();
   } else {
     drawRandomTickets(2);
+    showToast("AI Move", "AI Conductor drew 2 transit tickets.", "🤖");
     state.currentTurn = 1;
     updateUI();
   }
