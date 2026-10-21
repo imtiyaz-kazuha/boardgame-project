@@ -198,13 +198,12 @@ function initMap() {
     route.km = calculateHaversineDistance(from.lat, from.lng, to.lat, to.lng);
 
     // Multi-color dash pattern visualization:
-    // We compose the visual dash array to show supported colors
-    // Train (Green #10b981), Road (Yellow #facc15), Flight (Red #ef4444)
+    // Train (Green #10b981), Road (Yellow #facc15), Flight (Dark Purple #581c87 / #7e22ce)
     let primaryColor = '#10b981';
     let dashStyle = null;
 
     if (route.modes.includes('flight') && !route.modes.includes('train')) {
-      primaryColor = '#ef4444'; // Red solid
+      primaryColor = '#6b21a8'; // Dark Purple
       dashStyle = '10, 8';
     } else if (route.modes.includes('road') && !route.modes.includes('train')) {
       primaryColor = '#facc15'; // Yellow solid
@@ -234,7 +233,7 @@ function initMap() {
     const modeList = route.modes.map(m => {
       if (m === 'train') return '<span style="color:#10b981;">🚂 Train</span>';
       if (m === 'road') return '<span style="color:#facc15;">🚗 Road</span>';
-      if (m === 'flight') return '<span style="color:#ef4444;">✈️ Flight</span>';
+      if (m === 'flight') return '<span style="color:#a855f7;">✈️ Flight</span>';
       return m;
     }).join(' OR ');
 
