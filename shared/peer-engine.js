@@ -27,9 +27,9 @@ class PeerEngine {
     return code;
   }
 
-  initHost() {
+  initHost(customCode) {
     this.isHost = true;
-    const rawCode = this.generateRoomCode();
+    const rawCode = (customCode && customCode.trim()) ? customCode.trim().toLowerCase().replace(/[^a-z0-9]/g, '') : this.generateRoomCode();
     this.roomId = `${this.gamePrefix}-${rawCode}`;
 
     this.onStatus(`Initializing Host room: ${rawCode.toUpperCase()}...`);

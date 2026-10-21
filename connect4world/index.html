@@ -3,197 +3,298 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connect 4 World | Route Strategy Board Game</title>
+  <title>Connect 4 World | Global Circumnavigation Expedition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS for OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <link rel="stylesheet" href="../shared/common.css">
+  
+  <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="../shared/peer-engine.js"></script>
+
   <style>
-    /* In-game layout */
-    .game-wrapper {
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 20px;
-      padding: 20px 0 40px;
-      min-height: calc(100vh - 80px);
+    body {
+      overflow-x: hidden;
+      user-select: none;
     }
-    @media (max-width: 960px) {
-      .game-wrapper {
+    
+    /* Main Layout */
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 16px;
+      padding: 16px 20px 40px;
+      height: calc(100vh - 75px);
+      box-sizing: border-box;
+    }
+    @media (max-width: 1024px) {
+      .game-layout {
         grid-template-columns: 1fr;
+        height: auto;
       }
     }
 
-    /* Board Area */
-    .board-container {
+    /* Map Box */
+    .map-wrapper {
       position: relative;
-      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-color);
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      min-height: 520px;
     }
-    .board-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(15, 23, 42, 0.7);
-    }
-    .status-badge {
-      font-size: 0.85rem;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-weight: 600;
-      background: rgba(56, 189, 248, 0.15);
-      color: var(--accent-cyan);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-    }
-
-    /* Map SVG viewport */
-    .map-svg {
+    #worldMap {
       width: 100%;
       height: 100%;
-      min-height: 480px;
-      touch-action: manipulation;
-    }
-    .city-node {
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .city-node circle {
-      fill: #334155;
-      stroke: #64748b;
-      stroke-width: 2.5;
-      transition: all 0.2s;
-    }
-    .city-node:hover circle {
-      fill: #0284c7;
-      stroke: #38bdf8;
-      r: 14;
-    }
-    .city-label {
-      fill: #f8fafc;
-      font-size: 13px;
-      font-weight: 700;
-      pointer-events: none;
-      text-anchor: middle;
-      user-select: none;
-    }
-    .route-segment {
-      stroke-width: 8;
-      stroke-linecap: round;
-      cursor: pointer;
-      stroke: rgba(255, 255, 255, 0.18);
-      stroke-dasharray: 6 4;
-      transition: all 0.25s;
-    }
-    .route-segment:hover {
-      stroke: rgba(255, 255, 255, 0.6);
-      stroke-width: 11;
-    }
-    .claimed-p1 {
-      stroke: #38bdf8 !important;
-      stroke-dasharray: none !important;
-      filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8));
-    }
-    .claimed-p2 {
-      stroke: #f43f5e !important;
-      stroke-dasharray: none !important;
-      filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.8));
+      background: #0b1329;
+      z-index: 1;
     }
 
-    /* Sidebar controls */
-    .sidebar {
+    /* Leaflet Dark Map Tweaks */
+    .leaflet-tile {
+      filter: brightness(0.65) invert(1) contrast(3) hue-rotate(200deg) saturate(0.35);
+    }
+    .leaflet-container {
+      background: #090e1a !important;
+      font-family: var(--font-family) !important;
+    }
+    .leaflet-popup-content-wrapper {
+      background: rgba(15, 23, 42, 0.95) !important;
+      backdrop-filter: blur(8px);
+      color: #f8fafc !important;
+      border: 1px solid var(--border-color);
+      border-radius: 12px !important;
+    }
+    .leaflet-popup-tip {
+      background: rgba(15, 23, 42, 0.95) !important;
+    }
+
+    /* Custom City Pins */
+    .city-pin {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-    }
-    .panel-card {
-      padding: 18px;
-    }
-    .panel-card h3 {
-      font-size: 1rem;
-      margin-bottom: 12px;
-      display: flex;
       align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .pin-circle {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 10px #38bdf8;
+      transition: transform 0.2s;
+    }
+    .pin-circle:hover {
+      transform: scale(1.35);
+    }
+    .pin-label {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-top: 3px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Circumnavigation Progress */
+    .circ-bar-box {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
       gap: 8px;
     }
-    .player-stats {
+    .circ-track {
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      display: flex;
+    }
+    .circ-fill-p1 {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #0284c7);
+      width: 0%;
+      transition: width 0.4s ease;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+    }
+    .circ-fill-p2 {
+      height: 100%;
+      background: linear-gradient(90deg, #f43f5e, #e11d48);
+      width: 0%;
+      transition: width 0.4s ease;
+      box-shadow: 0 0 8px rgba(244, 63, 94, 0.8);
+    }
+
+    /* Sidebar Panels */
+    .sidebar-scroll {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      max-height: 100%;
+      padding-right: 4px;
+    }
+    .sidebar-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 999px;
+    }
+
+    .card-panel {
+      padding: 16px;
+    }
+    .score-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 10px 14px;
       border-radius: var(--radius-sm);
       margin-bottom: 8px;
-      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.03);
     }
-    .player-active {
-      border-color: var(--accent-cyan);
-      background: rgba(56, 189, 248, 0.08);
+    .active-p1 {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+    .active-p2 {
+      border-color: #f43f5e;
+      background: rgba(244, 63, 94, 0.1);
     }
 
-    /* Train Cards Hand */
-    .train-hand {
+    /* Transit Tickets Grid */
+    .tickets-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
     }
-    .train-card {
-      padding: 10px 6px;
+    .ticket-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
       border-radius: 8px;
-      text-align: center;
+      border: 1px solid var(--border-color);
       font-size: 0.85rem;
       font-weight: 700;
-      border: 1px solid var(--border-color);
-      cursor: pointer;
-      user-select: none;
-      transition: all 0.2s;
     }
-    .train-card:active {
-      transform: scale(0.95);
-    }
-    .card-blue { background: #0369a1; }
-    .card-red { background: #b91c1c; }
-    .card-green { background: #15803d; }
-    .card-yellow { background: #b45309; }
-    .card-purple { background: #6b21a8; }
-    .card-wild { background: linear-gradient(135deg, #0284c7, #e11d48); }
+    .ticket-train { background: #1e3a8a; }
+    .ticket-flight { background: #065f46; }
+    .ticket-ferry { background: #0c4a6e; }
+    .ticket-road { background: #713f12; }
 
-    /* Multiplayer Modal Overlay */
+    /* Missions / Secret Objectives */
+    .mission-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+    .mission-complete {
+      border-color: #34d399;
+      background: rgba(52, 211, 153, 0.08);
+    }
+
+    /* Modal dialog */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(8px);
-      z-index: 100;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
     }
-    .modal-box {
+    .modal-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       padding: 28px;
-      text-align: center;
+      text-align: left;
     }
-    .room-link-box {
-      background: rgba(0,0,0,0.5);
-      padding: 12px;
-      border-radius: var(--radius-sm);
-      border: 1px dashed var(--accent-cyan);
+    .tab-group {
+      display: flex;
+      gap: 8px;
       margin: 16px 0;
-      word-break: break-all;
-      font-family: monospace;
-      font-size: 0.9rem;
-      color: var(--accent-cyan);
-      user-select: all;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--accent-cyan);
+      color: #0f172a;
+      border-color: var(--accent-cyan);
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+    .waiting-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      border-top-color: var(--accent-cyan);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -202,122 +303,184 @@
   <div class="ambient-glow glow-2"></div>
 
   <!-- Header -->
-  <header style="padding: 16px 0; border-bottom: 1px solid var(--border-color); background: rgba(9, 13, 22, 0.85); backdrop-filter: blur(12px);">
+  <header style="padding: 12px 0; border-bottom: 1px solid var(--border-color); background: rgba(9, 13, 22, 0.85); backdrop-filter: blur(12px); position: sticky; top:0; z-index:100;">
     <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
-      <a href="../home/" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-weight: 700;">
-        <span>← Back to Hub</span>
+      <a href="../home/" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: #fff; font-weight: 700;">
+        <span>← Hub</span>
       </a>
-      <div style="font-weight: 800; font-size: 1.15rem; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        🌍 Connect 4 World
+      <div style="font-weight: 800; font-size: 1.1rem; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        🌍 Connect 4 World: Global Circumnavigation
       </div>
-      <button id="multiplayerBtn" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.85rem;">
-        🌐 P2P Online
+      <button id="openLobbyBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">
+        🎮 Game Lobby / AI
       </button>
     </div>
   </header>
 
-  <main class="container game-wrapper">
-    <!-- Map & Board Area -->
-    <section class="board-container">
-      <div class="board-header">
-        <div>
-          <span style="font-weight: 700; font-size: 1.05rem;">Global Rails Map</span>
-          <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 10px;">Claim connected routes between cities</span>
+  <div class="game-layout">
+    <!-- Map Canvas Area -->
+    <section class="map-wrapper">
+      <!-- Circumnavigation Progress HUD -->
+      <div class="circ-bar-box">
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700;">
+          <span style="color: #38bdf8;" id="hudP1Name">Player 1 (0° E-W)</span>
+          <span style="color: var(--text-dim);">🌐 Circumnavigation Target: 360° Longitude</span>
+          <span style="color: #f43f5e;" id="hudP2Name">Player 2 (0° E-W)</span>
         </div>
-        <div id="turnIndicator" class="status-badge">
-          Turn: Player 1 (Blue)
+        <div class="circ-track">
+          <div id="circP1Bar" class="circ-fill-p1"></div>
+          <div id="circP2Bar" class="circ-fill-p2"></div>
         </div>
       </div>
 
-      <!-- Interactive SVG Map -->
-      <svg id="gameMap" class="map-svg" viewBox="0 0 800 500">
-        <!-- Route lines will be rendered here dynamically -->
-        <g id="routesGroup"></g>
-        <!-- City Nodes -->
-        <g id="citiesGroup"></g>
-      </svg>
+      <!-- OpenStreetMap Container -->
+      <div id="worldMap"></div>
     </section>
 
-    <!-- Sidebar Controls -->
-    <aside class="sidebar">
-      <!-- Players scoreboard -->
-      <div class="glass-panel panel-card">
-        <h3>🏆 Leaderboard & Trains</h3>
-        <div id="p1Stats" class="player-stats player-active">
-          <div>
-            <strong style="color: #38bdf8;">Player 1 (Blue)</strong>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">Trains: <span id="p1Trains">15</span></div>
-          </div>
-          <div style="font-size: 1.3rem; font-weight: 800;" id="p1Score">0 pts</div>
+    <!-- Sidebar Control Center -->
+    <aside class="sidebar-scroll">
+      <!-- Players and Turns -->
+      <div class="glass-panel card-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 0.95rem;">🏆 Expedition Scores</h3>
+          <span id="turnPill" class="badge" style="margin: 0; padding: 4px 10px; font-size: 0.75rem;">Your Turn</span>
         </div>
 
-        <div id="p2Stats" class="player-stats">
+        <div id="scoreP1Box" class="score-row active-p1">
           <div>
-            <strong style="color: #f43f5e;">Player 2 (Red)</strong>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">Trains: <span id="p2Trains">15</span></div>
+            <div style="font-weight: 700; color: #38bdf8;" id="labelP1">Player 1</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);" id="subP1">Routes: 0 • Span: 0°</div>
           </div>
-          <div style="font-size: 1.3rem; font-weight: 800;" id="p2Score">0 pts</div>
+          <div style="font-size: 1.35rem; font-weight: 800;" id="scoreP1">0 pts</div>
+        </div>
+
+        <div id="scoreP2Box" class="score-row">
+          <div>
+            <div style="font-weight: 700; color: #f43f5e;" id="labelP2">Player 2 (AI)</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);" id="subP2">Routes: 0 • Span: 0°</div>
+          </div>
+          <div style="font-size: 1.35rem; font-weight: 800;" id="scoreP2">0 pts</div>
         </div>
       </div>
 
-      <!-- Action Center -->
-      <div class="glass-panel panel-card">
-        <h3>🎯 Game Actions</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-          Click any unclaimed route on the map to build tracks. Build 4 connected links or longest network to triumph!
+      <!-- Available Transit Resources -->
+      <div class="glass-panel card-panel">
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px;">🎫 Transit Tickets In Hand</h3>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">
+          Claim routes on map using required ticket types (🚂 Train, ✈️ Flight, 🚢 Ferry, 🚗 Road).
         </p>
-        <button id="drawCardsBtn" class="btn btn-primary" style="width: 100%; margin-bottom: 8px;">
-          🚂 Draw 2 Train Cards
-        </button>
-        <button id="resetGameBtn" class="btn btn-secondary" style="width: 100%;">
-          🔄 Restart Match
+        <div class="tickets-grid">
+          <div class="ticket-badge ticket-train">
+            <span>🚂 Train</span>
+            <span id="cntTrain">3</span>
+          </div>
+          <div class="ticket-badge ticket-flight">
+            <span>✈️ Flight</span>
+            <span id="cntFlight">3</span>
+          </div>
+          <div class="ticket-badge ticket-ferry">
+            <span>🚢 Ferry</span>
+            <span id="cntFerry">2</span>
+          </div>
+          <div class="ticket-badge ticket-road">
+            <span>🚗 Road</span>
+            <span id="cntRoad">3</span>
+          </div>
+        </div>
+        <button id="drawTicketsBtn" class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 0.85rem; padding: 9px;">
+          + Draw 2 Random Tickets
         </button>
       </div>
 
-      <!-- Player Hand of Resource Cards -->
-      <div class="glass-panel panel-card">
-        <h3>🎴 Current Hand Cards</h3>
-        <div class="train-hand">
-          <div class="train-card card-blue">Blue: <span id="cnt-blue">2</span></div>
-          <div class="train-card card-red">Red: <span id="cnt-red">2</span></div>
-          <div class="train-card card-green">Green: <span id="cnt-green">2</span></div>
-          <div class="train-card card-yellow">Gold: <span id="cnt-yellow">2</span></div>
-          <div class="train-card card-purple">Violet: <span id="cnt-purple">1</span></div>
-          <div class="train-card card-wild">Loco: <span id="cnt-wild">1</span></div>
+      <!-- Secret Expeditions & Missions -->
+      <div class="glass-panel card-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3 style="font-size: 0.95rem;">📜 Secret Missions</h3>
+          <span style="font-size: 0.75rem; color: #34d399;">Bonus Points</span>
         </div>
+        <div id="missionsList">
+          <!-- Dynamic Missions -->
+        </div>
+      </div>
+
+      <!-- Game Controls -->
+      <div class="glass-panel card-panel" style="display: flex; gap: 8px;">
+        <button id="centerMapBtn" class="btn btn-secondary" style="flex: 1; font-size: 0.8rem; padding: 8px;">
+          🌍 Reset View
+        </button>
+        <button id="forfeitBtn" class="btn btn-secondary" style="flex: 1; font-size: 0.8rem; padding: 8px; color: #f43f5e;">
+          🏳️ Resign
+        </button>
       </div>
     </aside>
-  </main>
+  </div>
 
-  <!-- P2P Lobby Modal -->
-  <div id="p2pModal" class="modal-overlay" style="display: none;">
-    <div class="glass-panel modal-box">
-      <h2 style="margin-bottom: 8px;">Multiplayer P2P Lobby</h2>
-      <p style="color: var(--text-muted); font-size: 0.9rem;">
-        Zero-cost WebRTC Peer-to-Peer. Share this link with your friend to play in real-time!
+  <!-- Lobby & Matchmaking Modal -->
+  <div id="lobbyModal" class="modal-overlay">
+    <div class="glass-panel modal-card">
+      <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px;">🎮 Game Setup</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        Choose to challenge intelligent AI or launch a peer-to-peer room with friends.
       </p>
 
-      <div id="hostSection">
-        <button id="createRoomBtn" class="btn btn-primary" style="width: 100%; margin-top: 14px;">
-          Host New Game Room
+      <!-- Tabs -->
+      <div class="tab-group">
+        <button id="tabAI" class="tab-btn active">🤖 Play with AI</button>
+        <button id="tabCreate" class="tab-btn">⚡ Create Room</button>
+        <button id="tabJoin" class="tab-btn">🔗 Join Room</button>
+      </div>
+
+      <!-- Player Nickname -->
+      <div class="form-group">
+        <label for="nicknameInput">Your Explorer Nickname</label>
+        <input id="nicknameInput" type="text" class="form-input" placeholder="e.g. Captain Nemo" value="Explorer-1">
+      </div>
+
+      <!-- AI Mode View -->
+      <div id="viewAI">
+        <div class="form-group">
+          <label for="aiDifficulty">AI Personality</label>
+          <select id="aiDifficulty" class="form-input" style="background:#0f172a;">
+            <option value="smart">Tactical Globetrotter (Aggressive Circumnavigation)</option>
+            <option value="balanced">Casual Traveler</option>
+          </select>
+        </div>
+        <button id="startAIBtn" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 6px;">
+          🚀 Start Match with AI
         </button>
-        <div id="roomLinkBox" class="room-link-box" style="display: none;"></div>
       </div>
 
-      <div style="margin: 18px 0; border-bottom: 1px solid var(--border-color); position: relative;">
-        <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--bg-card); padding: 0 10px; font-size: 0.8rem; color: var(--text-dim);">OR JOIN</span>
+      <!-- Create Room View -->
+      <div id="viewCreate" style="display: none;">
+        <div class="form-group">
+          <label for="roomNameInput">Room Name / Code</label>
+          <input id="roomNameInput" type="text" class="form-input" placeholder="e.g. voyage-alpha">
+        </div>
+        <button id="hostRoomBtn" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 6px;">
+          ✨ Create P2P Room
+        </button>
+        <!-- Waiting state -->
+        <div id="hostWaitingArea" style="display:none; margin-top: 16px; padding: 14px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px dashed var(--accent-cyan); text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
+            <div class="waiting-spinner"></div>
+            <strong style="color: #38bdf8;">Waiting for opponent to join...</strong>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Share room link:</div>
+          <input id="shareLinkInput" type="text" readonly class="form-input" style="font-size: 0.8rem; text-align: center; color: #38bdf8;" onclick="this.select();">
+        </div>
       </div>
 
-      <div style="display: flex; gap: 8px;">
-        <input id="roomCodeInput" type="text" placeholder="Enter Room Code (e.g. 7k3w)" style="flex-grow: 1; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: rgba(0,0,0,0.3); color: #fff; font-size: 0.9rem;">
-        <button id="joinRoomBtn" class="btn btn-secondary">Join</button>
+      <!-- Join Room View -->
+      <div id="viewJoin" style="display: none;">
+        <div class="form-group">
+          <label for="joinRoomCodeInput">Target Room Code / Name</label>
+          <input id="joinRoomCodeInput" type="text" class="form-input" placeholder="e.g. voyage-alpha">
+        </div>
+        <button id="connectRoomBtn" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 6px;">
+          🔗 Connect to Room
+        </button>
+        <div id="joinStatusText" style="font-size: 0.85rem; margin-top: 12px; text-align: center; color: var(--accent-cyan);"></div>
       </div>
-
-      <div id="connectionStatus" style="margin-top: 16px; font-size: 0.85rem; color: var(--accent-cyan);"></div>
-
-      <button id="closeModalBtn" class="btn btn-secondary" style="width: 100%; margin-top: 20px;">
-        Close Modal
-      </button>
     </div>
   </div>
 

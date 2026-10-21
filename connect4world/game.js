@@ -1,310 +1,701 @@
-// Cities data with coordinates on 800x500 map
-const CITIES = [
-  { id: 'london', name: 'London', x: 120, y: 150 },
-  { id: 'paris', name: 'Paris', x: 230, y: 220 },
-  { id: 'berlin', name: 'Berlin', x: 380, y: 130 },
-  { id: 'rome', name: 'Rome', x: 320, y: 360 },
-  { id: 'cairo', name: 'Cairo', x: 490, y: 410 },
-  { id: 'moscow', name: 'Moscow', x: 570, y: 110 },
-  { id: 'dubai', name: 'Dubai', x: 670, y: 350 },
-  { id: 'tokyo', name: 'Tokyo', x: 730, y: 190 }
+// Major Global Capital and Important Cities with Real Lat/Lng
+const WORLD_CITIES = [
+  // Europe
+  { id: 'london', name: 'London', lat: 51.5074, lng: -0.1278, country: 'UK' },
+  { id: 'paris', name: 'Paris', lat: 48.8566, lng: 2.3522, country: 'France' },
+  { id: 'rome', name: 'Rome', lat: 41.9028, lng: 12.4964, country: 'Italy' },
+  { id: 'berlin', name: 'Berlin', lat: 52.5200, lng: 13.4050, country: 'Germany' },
+  { id: 'moscow', name: 'Moscow', lat: 55.7558, lng: 37.6173, country: 'Russia' },
+  { id: 'istanbul', name: 'Istanbul', lat: 41.0082, lng: 28.9784, country: 'Turkey' },
+
+  // Middle East & Africa
+  { id: 'cairo', name: 'Cairo', lat: 30.0444, lng: 31.2357, country: 'Egypt' },
+  { id: 'dubai', name: 'Dubai', lat: 25.2048, lng: 55.2708, country: 'UAE' },
+  { id: 'nairobi', name: 'Nairobi', lat: -1.2921, lng: 36.8219, country: 'Kenya' },
+  { id: 'capetown', name: 'Cape Town', lat: -33.9249, lng: 18.4241, country: 'South Africa' },
+
+  // Asia
+  { id: 'mumbai', name: 'Mumbai', lat: 19.0760, lng: 72.8777, country: 'India' },
+  { id: 'bangkok', name: 'Bangkok', lat: 13.7563, lng: 100.5018, country: 'Thailand' },
+  { id: 'singapore', name: 'Singapore', lat: 1.3521, lng: 103.8198, country: 'Singapore' },
+  { id: 'beijing', name: 'Beijing', lat: 39.9042, lng: 116.4074, country: 'China' },
+  { id: 'tokyo', name: 'Tokyo', lat: 35.6762, lng: 139.6503, country: 'Japan' },
+
+  // Oceania
+  { id: 'sydney', name: 'Sydney', lat: -33.8688, lng: 151.2093, country: 'Australia' },
+  { id: 'auckland', name: 'Auckland', lat: -36.8485, lng: 174.7633, country: 'New Zealand' },
+
+  // Americas
+  { id: 'honolulu', name: 'Honolulu', lat: 21.3069, lng: -157.8583, country: 'USA' },
+  { id: 'losangeles', name: 'Los Angeles', lat: 34.0522, lng: -118.2437, country: 'USA' },
+  { id: 'newyork', name: 'New York', lat: 40.7128, lng: -74.0060, country: 'USA' },
+  { id: 'mexicocity', name: 'Mexico City', lat: 19.4326, lng: -99.1332, country: 'Mexico' },
+  { id: 'bogota', name: 'Bogota', lat: 4.7110, lng: -74.0721, country: 'Colombia' },
+  { id: 'riodejaneiro', name: 'Rio de Janeiro', lat: -22.9068, lng: -43.1729, country: 'Brazil' },
+  { id: 'buenosaires', name: 'Buenos Aires', lat: -34.6037, lng: -58.3816, country: 'Argentina' }
 ];
 
-// Available rail routes between cities
-const ROUTES = [
-  { id: 'r1', from: 'london', to: 'paris', length: 2, color: 'blue', claimedBy: null },
-  { id: 'r2', from: 'london', to: 'berlin', length: 3, color: 'green', claimedBy: null },
-  { id: 'r3', from: 'paris', to: 'berlin', length: 2, color: 'yellow', claimedBy: null },
-  { id: 'r4', from: 'paris', to: 'rome', length: 3, color: 'red', claimedBy: null },
-  { id: 'r5', from: 'berlin', to: 'rome', length: 3, color: 'purple', claimedBy: null },
-  { id: 'r6', from: 'berlin', to: 'moscow', length: 3, color: 'blue', claimedBy: null },
-  { id: 'r7', from: 'rome', to: 'cairo', length: 3, color: 'yellow', claimedBy: null },
-  { id: 'r8', from: 'cairo', to: 'dubai', length: 3, color: 'red', claimedBy: null },
-  { id: 'r9', from: 'moscow', to: 'tokyo', length: 4, color: 'green', claimedBy: null },
-  { id: 'r10', from: 'dubai', to: 'tokyo', length: 3, color: 'purple', claimedBy: null },
-  { id: 'r11', from: 'moscow', to: 'dubai', length: 3, color: 'yellow', claimedBy: null }
+// Transit Modes allowed:
+// 'train', 'flight', 'ferry', 'road', 'any'
+const WORLD_ROUTES = [
+  // Europe Cluster
+  { id: 'r_lon_par', from: 'london', to: 'paris', dist: 1, modes: ['train', 'flight', 'ferry'], cost: 1 },
+  { id: 'r_par_ber', from: 'paris', to: 'berlin', dist: 2, modes: ['train', 'road', 'flight'], cost: 2 },
+  { id: 'r_par_rom', from: 'paris', to: 'rome', dist: 2, modes: ['train', 'flight', 'road'], cost: 2 },
+  { id: 'r_ber_mos', from: 'berlin', to: 'moscow', dist: 3, modes: ['train', 'flight'], cost: 3 },
+  { id: 'r_rom_ist', from: 'rome', to: 'istanbul', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
+  { id: 'r_ist_mos', from: 'istanbul', to: 'moscow', dist: 2, modes: ['flight'], cost: 2 },
+
+  // Middle East & Africa
+  { id: 'r_ist_cai', from: 'istanbul', to: 'cairo', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
+  { id: 'r_cai_dub', from: 'cairo', to: 'dubai', dist: 2, modes: ['flight', 'road'], cost: 2 },
+  { id: 'r_cai_nai', from: 'cairo', to: 'nairobi', dist: 3, modes: ['flight'], cost: 3 },
+  { id: 'r_nai_cap', from: 'nairobi', to: 'capetown', dist: 3, modes: ['flight', 'road'], cost: 3 },
+  { id: 'r_dub_mum', from: 'dubai', to: 'mumbai', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
+
+  // Asia
+  { id: 'r_mos_bei', from: 'moscow', to: 'beijing', dist: 4, modes: ['train', 'flight'], cost: 4 },
+  { id: 'r_mum_ban', from: 'mumbai', to: 'bangkok', dist: 3, modes: ['flight', 'ferry'], cost: 3 },
+  { id: 'r_ban_sin', from: 'bangkok', to: 'singapore', dist: 2, modes: ['train', 'road', 'flight'], cost: 2 },
+  { id: 'r_bei_tok', from: 'beijing', to: 'tokyo', dist: 3, modes: ['flight', 'ferry'], cost: 3 },
+  { id: 'r_sin_syd', from: 'singapore', to: 'sydney', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
+  { id: 'r_tok_syd', from: 'tokyo', to: 'sydney', dist: 4, modes: ['flight'], cost: 4 },
+  { id: 'r_syd_auc', from: 'sydney', to: 'auckland', dist: 2, modes: ['flight', 'ferry'], cost: 2 },
+
+  // Pacific Trans-Oceanic Circumnavigation Bridge!
+  { id: 'r_tok_hono', from: 'tokyo', to: 'honolulu', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
+  { id: 'r_auc_hono', from: 'auckland', to: 'honolulu', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
+  { id: 'r_hono_la', from: 'honolulu', to: 'losangeles', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
+
+  // Americas
+  { id: 'r_la_ny', from: 'losangeles', to: 'newyork', dist: 3, modes: ['train', 'road', 'flight'], cost: 3 },
+  { id: 'r_la_mex', from: 'losangeles', to: 'mexicocity', dist: 2, modes: ['road', 'flight'], cost: 2 },
+  { id: 'r_mex_bog', from: 'mexicocity', to: 'bogota', dist: 3, modes: ['flight'], cost: 3 },
+  { id: 'r_ny_bog', from: 'newyork', to: 'bogota', dist: 3, modes: ['flight'], cost: 3 },
+  { id: 'r_bog_rio', from: 'bogota', to: 'riodejaneiro', dist: 3, modes: ['flight', 'road'], cost: 3 },
+  { id: 'r_rio_bue', from: 'riodejaneiro', to: 'buenosaires', dist: 2, modes: ['train', 'road', 'flight'], cost: 2 },
+
+  // Atlantic Trans-Oceanic Circumnavigation Bridge!
+  { id: 'r_ny_lon', from: 'newyork', to: 'london', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
+  { id: 'r_rio_cap', from: 'riodejaneiro', to: 'capetown', dist: 4, modes: ['flight', 'ferry'], cost: 4 },
+  { id: 'r_rio_par', from: 'riodejaneiro', to: 'paris', dist: 4, modes: ['flight', 'ferry'], cost: 4 }
 ];
 
-// Game State
-let gameState = {
-  currentTurn: 1, // 1 for Player 1, 2 for Player 2
+// Secret Missions
+const MISSIONS_POOL = [
+  { id: 'm1', name: 'Silk & Steel', from: 'london', to: 'tokyo', pts: 20, desc: 'Connect London to Tokyo across Eurasia' },
+  { id: 'm2', name: 'Trans-Atlantic Express', from: 'newyork', to: 'paris', pts: 14, desc: 'Connect New York to Paris' },
+  { id: 'm3', name: 'Southern Cross', from: 'capetown', to: 'sydney', pts: 22, desc: 'Connect Cape Town to Sydney' },
+  { id: 'm4', name: 'Pan-American Highway', from: 'newyork', to: 'buenosaires', pts: 18, desc: 'Connect New York to Buenos Aires' },
+  { id: 'm5', name: 'Pacific Odyssey', from: 'tokyo', to: 'losangeles', pts: 16, desc: 'Connect Tokyo to Los Angeles via Honolulu' },
+  { id: 'm6', name: 'Spice Route', from: 'cairo', to: 'singapore', pts: 16, desc: 'Connect Cairo to Singapore' }
+];
+
+// Game State Definition
+let state = {
+  mode: 'ai', // 'ai' or 'p2p'
+  isHost: true,
+  myNum: 1,
+  currentTurn: 1, // 1: P1, 2: P2
+  p1Name: 'Explorer 1',
+  p2Name: 'AI Explorer',
   p1Score: 0,
   p2Score: 0,
-  p1Trains: 15,
-  p2Trains: 15,
-  routes: JSON.parse(JSON.stringify(ROUTES)),
-  cards: {
-    blue: 2,
-    red: 2,
-    green: 2,
-    yellow: 2,
-    purple: 1,
-    wild: 1
-  }
+  p1Span: 0, // Longitude coverage in degrees (0 to 360)
+  p2Span: 0,
+  p1Routes: [],
+  p2Routes: [],
+  claimed: {}, // routeId -> playerNum
+  p1Tickets: { train: 3, flight: 3, ferry: 2, road: 3 },
+  p2Tickets: { train: 3, flight: 3, ferry: 2, road: 3 },
+  p1Missions: [],
+  p2Missions: [],
+  gameOver: false
 };
 
+let map = null;
+let markers = {};
+let polylines = {};
 let peerEngine = null;
-let myPlayerNum = 1; // 1 for host/local, 2 for client joiner
-let isOnline = false;
 
-// DOM references
-const routesGroup = document.getElementById('routesGroup');
-const citiesGroup = document.getElementById('citiesGroup');
-const turnIndicator = document.getElementById('turnIndicator');
-const p1ScoreEl = document.getElementById('p1Score');
-const p2ScoreEl = document.getElementById('p2Score');
-const p1TrainsEl = document.getElementById('p1Trains');
-const p2TrainsEl = document.getElementById('p2Trains');
-const p1StatsEl = document.getElementById('p1Stats');
-const p2StatsEl = document.getElementById('p2Stats');
+// Initialize Map with Leaflet & OpenStreetMap tiles
+function initMap() {
+  if (map) return;
 
-// Render board
-function renderBoard() {
-  routesGroup.innerHTML = '';
-  citiesGroup.innerHTML = '';
+  map = L.map('worldMap', {
+    center: [25, 10],
+    zoom: 2,
+    minZoom: 2,
+    maxZoom: 6,
+    worldCopyJump: false,
+    maxBounds: [[-85, -180], [85, 180]]
+  });
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
 
   const cityMap = {};
-  CITIES.forEach(c => cityMap[c.id] = c);
+  WORLD_CITIES.forEach(c => cityMap[c.id] = c);
 
-  // Render routes
-  gameState.routes.forEach(route => {
+  // Render Routes
+  WORLD_ROUTES.forEach(route => {
     const from = cityMap[route.from];
     const to = cityMap[route.to];
 
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', from.x);
-    line.setAttribute('y1', from.y);
-    line.setAttribute('x2', to.x);
-    line.setAttribute('y2', to.y);
-    line.setAttribute('class', 'route-segment');
-    line.setAttribute('data-id', route.id);
+    const latlngs = [[from.lat, from.lng], [to.lat, to.lng]];
+    
+    // Choose route color based on available modes
+    let color = '#94a3b8';
+    if (route.modes.includes('flight') && !route.modes.includes('train')) color = '#10b981';
+    if (route.modes.includes('ferry') && !route.modes.includes('flight')) color = '#0284c7';
+    if (route.modes.includes('train')) color = '#6366f1';
 
-    if (route.claimedBy === 1) {
-      line.classList.add('claimed-p1');
-    } else if (route.claimedBy === 2) {
-      line.classList.add('claimed-p2');
+    const line = L.polyline(latlngs, {
+      color: color,
+      weight: 4,
+      opacity: 0.6,
+      dashArray: '6, 8',
+      interactive: true
+    }).addTo(map);
+
+    // Popup showing requirements
+    const modeIcons = route.modes.map(m => {
+      if (m === 'train') return '🚂 Train';
+      if (m === 'flight') return '✈️ Flight';
+      if (m === 'ferry') return '🚢 Ferry';
+      if (m === 'road') return '🚗 Road';
+      return m;
+    }).join(' or ');
+
+    line.bindTooltip(`<b>${from.name} ↔ ${to.name}</b><br>Needs: ${route.cost}x [${modeIcons}]`, {
+      sticky: true
+    });
+
+    line.on('click', () => handleClaimRoute(route.id));
+    polylines[route.id] = line;
+  });
+
+  // Render City Markers (Pins)
+  WORLD_CITIES.forEach(city => {
+    const icon = L.divIcon({
+      className: 'city-pin',
+      html: `
+        <div class="pin-circle"></div>
+        <div class="pin-label">${city.name}</div>
+      `,
+      iconSize: [60, 36],
+      iconAnchor: [30, 8]
+    });
+
+    const marker = L.marker([city.lat, city.lng], { icon: icon }).addTo(map);
+    marker.bindPopup(`<b>${city.name}</b> (${city.country})<br>Coordinates: ${city.lat.toFixed(1)}°, ${city.lng.toFixed(1)}°`);
+    markers[city.id] = marker;
+  });
+}
+
+// Check player has enough matching tickets
+function canAffordRoute(playerNum, route) {
+  const tickets = playerNum === 1 ? state.p1Tickets : state.p2Tickets;
+  for (const mode of route.modes) {
+    if (tickets[mode] >= route.cost) {
+      return mode; // Return first valid mode found
     }
+  }
+  return null;
+}
 
-    line.addEventListener('click', () => handleRouteClick(route.id));
-    routesGroup.appendChild(line);
-  });
+// Claim a route
+function handleClaimRoute(routeId) {
+  if (state.gameOver) return;
 
-  // Render cities
-  CITIES.forEach(city => {
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', 'city-node');
+  // Turn check in online mode
+  if (state.mode === 'p2p' && state.currentTurn !== state.myNum) {
+    alert("Wait for opponent's turn!");
+    return;
+  }
+  if (state.mode === 'ai' && state.currentTurn === 2) {
+    return;
+  }
 
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', city.x);
-    circle.setAttribute('cy', city.y);
-    circle.setAttribute('r', '11');
+  if (state.claimed[routeId]) {
+    alert("This route is already claimed!");
+    return;
+  }
 
-    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    label.setAttribute('x', city.x);
-    label.setAttribute('y', city.y + 24);
-    label.setAttribute('class', 'city-label');
-    label.textContent = city.name;
+  const route = WORLD_ROUTES.find(r => r.id === routeId);
+  const player = state.currentTurn;
+  const validMode = canAffordRoute(player, route);
 
-    g.appendChild(circle);
-    g.appendChild(label);
-    citiesGroup.appendChild(g);
-  });
+  if (!validMode) {
+    alert(`You do not have ${route.cost} tickets matching [${route.modes.join(', ')}]! Draw tickets first.`);
+    return;
+  }
 
+  // Deduct tickets
+  const tickets = player === 1 ? state.p1Tickets : state.p2Tickets;
+  tickets[validMode] -= route.cost;
+
+  // Claim
+  state.claimed[routeId] = player;
+  if (player === 1) {
+    state.p1Routes.push(routeId);
+    state.p1Score += route.cost * 5;
+  } else {
+    state.p2Routes.push(routeId);
+    state.p2Score += route.cost * 5;
+  }
+
+  // Recalculate longitude circumnavigation
+  updateCircumnavigation();
+  checkMissions();
+  updateVisuals();
+
+  // Check Game End Condition (Circumnavigation or Route exhaustion)
+  if (state.p1Span >= 360 || state.p2Span >= 360) {
+    endGame(state.p1Span >= 360 ? 1 : 2, "completed a full 360° global circumnavigation");
+    return;
+  }
+
+  // Next Turn
+  state.currentTurn = state.currentTurn === 1 ? 2 : 1;
   updateUI();
+
+  // Sync P2P
+  if (state.mode === 'p2p' && peerEngine) {
+    peerEngine.send({ type: 'SYNC_STATE', state });
+  }
+
+  // AI Turn
+  if (state.mode === 'ai' && state.currentTurn === 2 && !state.gameOver) {
+    setTimeout(playAITurn, 900);
+  }
+}
+
+// Compute circumnavigation coverage (span of connected longitude)
+function updateCircumnavigation() {
+  const cityMap = {};
+  WORLD_CITIES.forEach(c => cityMap[c.id] = c);
+
+  function getSpan(routeIds) {
+    if (routeIds.length === 0) return 0;
+    const lngs = [];
+    routeIds.forEach(id => {
+      const r = WORLD_ROUTES.find(x => x.id === id);
+      if (r) {
+        lngs.push(cityMap[r.from].lng, cityMap[r.to].lng);
+      }
+    });
+    if (lngs.length === 0) return 0;
+    const min = Math.min(...lngs);
+    const max = Math.max(...lngs);
+    // Span calculation with trans-pacific wrap
+    const diff = max - min;
+    return Math.min(360, Math.round(diff * 1.15));
+  }
+
+  state.p1Span = getSpan(state.p1Routes);
+  state.p2Span = getSpan(state.p2Routes);
+}
+
+// Check Secret Missions completion using BFS
+function checkMissions() {
+  const checkConnected = (fromId, toId, playerRoutes) => {
+    const adj = {};
+    playerRoutes.forEach(rid => {
+      const r = WORLD_ROUTES.find(x => x.id === rid);
+      if (!adj[r.from]) adj[r.from] = [];
+      if (!adj[r.to]) adj[r.to] = [];
+      adj[r.from].push(r.to);
+      adj[r.to].push(r.from);
+    });
+
+    const queue = [fromId];
+    const visited = new Set();
+    while (queue.length > 0) {
+      const curr = queue.shift();
+      if (curr === toId) return true;
+      visited.add(curr);
+      (adj[curr] || []).forEach(next => {
+        if (!visited.has(next)) {
+          visited.add(next);
+          queue.push(next);
+        }
+      });
+    }
+    return false;
+  };
+
+  state.p1Missions.forEach(m => {
+    if (!m.completed && checkConnected(m.from, m.to, state.p1Routes)) {
+      m.completed = true;
+      state.p1Score += m.pts;
+    }
+  });
+
+  state.p2Missions.forEach(m => {
+    if (!m.completed && checkConnected(m.from, m.to, state.p2Routes)) {
+      m.completed = true;
+      state.p2Score += m.pts;
+    }
+  });
+}
+
+function updateVisuals() {
+  Object.keys(polylines).forEach(rid => {
+    const line = polylines[rid];
+    const claimedBy = state.claimed[rid];
+    if (claimedBy === 1) {
+      line.setStyle({
+        color: '#38bdf8',
+        weight: 6,
+        opacity: 0.95,
+        dashArray: null
+      });
+    } else if (claimedBy === 2) {
+      line.setStyle({
+        color: '#f43f5e',
+        weight: 6,
+        opacity: 0.95,
+        dashArray: null
+      });
+    }
+  });
 }
 
 function updateUI() {
-  p1ScoreEl.textContent = `${gameState.p1Score} pts`;
-  p2ScoreEl.textContent = `${gameState.p2Score} pts`;
-  p1TrainsEl.textContent = gameState.p1Trains;
-  p2TrainsEl.textContent = gameState.p2Trains;
+  document.getElementById('scoreP1').textContent = `${state.p1Score} pts`;
+  document.getElementById('scoreP2').textContent = `${state.p2Score} pts`;
+  document.getElementById('labelP1').textContent = state.p1Name;
+  document.getElementById('labelP2').textContent = state.p2Name;
 
-  if (gameState.currentTurn === 1) {
-    turnIndicator.textContent = `Turn: Player 1 (Blue)${isOnline && myPlayerNum === 1 ? ' - YOUR TURN' : ''}`;
-    turnIndicator.style.borderColor = 'rgba(56, 189, 248, 0.5)';
-    turnIndicator.style.color = '#38bdf8';
-    p1StatsEl.classList.add('player-active');
-    p2StatsEl.classList.remove('player-active');
+  document.getElementById('subP1').textContent = `Routes: ${state.p1Routes.length} • Span: ${state.p1Span}°`;
+  document.getElementById('subP2').textContent = `Routes: ${state.p2Routes.length} • Span: ${state.p2Span}°`;
+
+  // Circumnavigation HUD
+  document.getElementById('hudP1Name').textContent = `${state.p1Name}: ${state.p1Span}° / 360°`;
+  document.getElementById('hudP2Name').textContent = `${state.p2Name}: ${state.p2Span}° / 360°`;
+
+  const p1Pct = Math.min(100, Math.round((state.p1Span / 360) * 100));
+  const p2Pct = Math.min(100, Math.round((state.p2Span / 360) * 100));
+  document.getElementById('circP1Bar').style.width = `${p1Pct}%`;
+  document.getElementById('circP2Bar').style.width = `${p2Pct}%`;
+
+  // Turn pill
+  const turnPill = document.getElementById('turnPill');
+  const p1Box = document.getElementById('scoreP1Box');
+  const p2Box = document.getElementById('scoreP2Box');
+
+  if (state.currentTurn === 1) {
+    turnPill.textContent = state.mode === 'p2p' && state.myNum === 2 ? `${state.p1Name}'s Turn` : "Your Turn";
+    turnPill.style.color = '#38bdf8';
+    p1Box.classList.add('active-p1');
+    p2Box.classList.remove('active-p2');
   } else {
-    turnIndicator.textContent = `Turn: Player 2 (Red)${isOnline && myPlayerNum === 2 ? ' - YOUR TURN' : ''}`;
-    turnIndicator.style.borderColor = 'rgba(244, 63, 94, 0.5)';
-    turnIndicator.style.color = '#f43f5e';
-    p2StatsEl.classList.add('player-active');
-    p1StatsEl.classList.remove('player-active');
+    turnPill.textContent = state.mode === 'ai' ? "AI Thinking..." : `${state.p2Name}'s Turn`;
+    turnPill.style.color = '#f43f5e';
+    p2Box.classList.add('active-p2');
+    p1Box.classList.remove('active-p1');
   }
 
-  // Update cards
-  ['blue', 'red', 'green', 'yellow', 'purple', 'wild'].forEach(color => {
-    const el = document.getElementById(`cnt-${color}`);
-    if (el) el.textContent = gameState.cards[color] || 0;
+  // Display tickets in hand
+  const currentTickets = (state.mode === 'p2p' && state.myNum === 2) ? state.p2Tickets : state.p1Tickets;
+  document.getElementById('cntTrain').textContent = currentTickets.train;
+  document.getElementById('cntFlight').textContent = currentTickets.flight;
+  document.getElementById('cntFerry').textContent = currentTickets.ferry;
+  document.getElementById('cntRoad').textContent = currentTickets.road;
+
+  // Display Missions
+  const missionsList = document.getElementById('missionsList');
+  missionsList.innerHTML = '';
+  const myMissions = (state.mode === 'p2p' && state.myNum === 2) ? state.p2Missions : state.p1Missions;
+  myMissions.forEach(m => {
+    const div = document.createElement('div');
+    div.className = `mission-item ${m.completed ? 'mission-complete' : ''}`;
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; font-weight:700;">
+        <span>${m.name}</span>
+        <span style="color:${m.completed ? '#34d399' : '#f59e0b'};">+${m.pts} pts ${m.completed ? '✓' : ''}</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${m.desc}</div>
+    `;
+    missionsList.appendChild(div);
   });
 }
 
-function handleRouteClick(routeId) {
-  if (isOnline && gameState.currentTurn !== myPlayerNum) {
-    alert("Wait for opponent's turn!");
-    return;
-  }
+// AI Engine
+function playAITurn() {
+  if (state.gameOver || state.currentTurn !== 2) return;
 
-  const route = gameState.routes.find(r => r.id === routeId);
-  if (!route || route.claimedBy !== null) return;
+  // Check possible routes AI can afford
+  const available = WORLD_ROUTES.filter(r => !state.claimed[r.id]);
+  const affordable = available.filter(r => canAffordRoute(2, r) !== null);
 
-  const currentP = gameState.currentTurn;
-  const trainCount = currentP === 1 ? gameState.p1Trains : gameState.p2Trains;
+  if (affordable.length > 0) {
+    // Pick the most valuable route or a route that expands longitude span
+    affordable.sort((a, b) => b.cost - a.cost);
+    const chosen = affordable[0];
+    const mode = canAffordRoute(2, chosen);
 
-  if (trainCount < route.length) {
-    alert("Not enough trains to claim this track!");
-    return;
-  }
+    state.p2Tickets[mode] -= chosen.cost;
+    state.claimed[chosen.id] = 2;
+    state.p2Routes.push(chosen.id);
+    state.p2Score += chosen.cost * 5;
 
-  // Claim track
-  route.claimedBy = currentP;
-  const points = route.length * 4;
+    updateCircumnavigation();
+    checkMissions();
+    updateVisuals();
 
-  if (currentP === 1) {
-    gameState.p1Trains -= route.length;
-    gameState.p1Score += points;
+    if (state.p2Span >= 360) {
+      endGame(2, "completed a full 360° global circumnavigation");
+      return;
+    }
+
+    state.currentTurn = 1;
+    updateUI();
   } else {
-    gameState.p2Trains -= route.length;
-    gameState.p2Score += points;
-  }
-
-  // Switch turn
-  gameState.currentTurn = currentP === 1 ? 2 : 1;
-  renderBoard();
-
-  // Sync over P2P if active
-  if (peerEngine && isOnline) {
-    peerEngine.send({
-      type: 'STATE_UPDATE',
-      state: gameState
-    });
-  }
-
-  checkEndGame();
-}
-
-function checkEndGame() {
-  if (gameState.p1Trains <= 2 || gameState.p2Trains <= 2) {
-    const winner = gameState.p1Score > gameState.p2Score ? 'Player 1' : 'Player 2';
-    setTimeout(() => {
-      alert(`Game Finished! ${winner} wins the Continental Grand Tour! 🏆`);
-    }, 150);
+    // Draw tickets
+    drawRandomTickets(2);
+    state.currentTurn = 1;
+    updateUI();
   }
 }
 
-// Action button handlers
-document.getElementById('drawCardsBtn').addEventListener('click', () => {
-  if (isOnline && gameState.currentTurn !== myPlayerNum) {
+// Draw Tickets
+function drawRandomTickets(playerNum) {
+  const types = ['train', 'flight', 'ferry', 'road'];
+  const t1 = types[Math.floor(Math.random() * types.length)];
+  const t2 = types[Math.floor(Math.random() * types.length)];
+  const t = playerNum === 1 ? state.p1Tickets : state.p2Tickets;
+  t[t1]++;
+  t[t2]++;
+}
+
+document.getElementById('drawTicketsBtn').addEventListener('click', () => {
+  if (state.gameOver) return;
+  if (state.mode === 'p2p' && state.currentTurn !== state.myNum) {
     alert("Wait for opponent's turn!");
     return;
   }
-  const colors = ['blue', 'red', 'green', 'yellow', 'purple', 'wild'];
-  const c1 = colors[Math.floor(Math.random() * colors.length)];
-  const c2 = colors[Math.floor(Math.random() * colors.length)];
-  gameState.cards[c1] = (gameState.cards[c1] || 0) + 1;
-  gameState.cards[c2] = (gameState.cards[c2] || 0) + 1;
+  if (state.mode === 'ai' && state.currentTurn === 2) return;
 
-  // Turn ends after drawing cards
-  gameState.currentTurn = gameState.currentTurn === 1 ? 2 : 1;
+  drawRandomTickets(state.currentTurn);
+  state.currentTurn = state.currentTurn === 1 ? 2 : 1;
   updateUI();
 
-  if (peerEngine && isOnline) {
-    peerEngine.send({
-      type: 'STATE_UPDATE',
-      state: gameState
-    });
+  if (state.mode === 'p2p' && peerEngine) {
+    peerEngine.send({ type: 'SYNC_STATE', state });
+  }
+
+  if (state.mode === 'ai' && state.currentTurn === 2 && !state.gameOver) {
+    setTimeout(playAITurn, 800);
   }
 });
 
-document.getElementById('resetGameBtn').addEventListener('click', () => {
-  if (confirm("Restart current match?")) {
-    resetMatch();
+function endGame(winnerNum, reason) {
+  state.gameOver = true;
+  const winnerName = winnerNum === 1 ? state.p1Name : state.p2Name;
+  const p1Final = state.p1Score;
+  const p2Final = state.p2Score;
+
+  let grandWinner = winnerName;
+  if (p1Final !== p2Final) {
+    grandWinner = p1Final > p2Final ? state.p1Name : state.p2Name;
+  }
+
+  setTimeout(() => {
+    alert(`🏁 GAME OVER!\n\n${winnerName} ${reason}!\n\nFinal Scores:\n${state.p1Name}: ${p1Final} pts\n${state.p2Name}: ${p2Final} pts\n\n🏆 Grand Champion: ${grandWinner}!`);
+  }, 200);
+}
+
+// Reset view
+document.getElementById('centerMapBtn').addEventListener('click', () => {
+  if (map) map.setView([25, 10], 2);
+});
+
+// Forfeit
+document.getElementById('forfeitBtn').addEventListener('click', () => {
+  if (confirm("Are you sure you want to resign the expedition?")) {
+    endGame(state.myNum === 1 ? 2 : 1, "won by opponent resignation");
   }
 });
 
-function resetMatch() {
-  gameState = {
-    currentTurn: 1,
-    p1Score: 0,
-    p2Score: 0,
-    p1Trains: 15,
-    p2Trains: 15,
-    routes: JSON.parse(JSON.stringify(ROUTES)),
-    cards: { blue: 2, red: 2, green: 2, yellow: 2, purple: 1, wild: 1 }
-  };
-  renderBoard();
-  if (peerEngine && isOnline) {
-    peerEngine.send({
-      type: 'STATE_UPDATE',
-      state: gameState
-    });
+// Modal & Tabs
+const lobbyModal = document.getElementById('lobbyModal');
+const tabAI = document.getElementById('tabAI');
+const tabCreate = document.getElementById('tabCreate');
+const tabJoin = document.getElementById('tabJoin');
+const viewAI = document.getElementById('viewAI');
+const viewCreate = document.getElementById('viewCreate');
+const viewJoin = document.getElementById('viewJoin');
+
+tabAI.addEventListener('click', () => switchTab('ai'));
+tabCreate.addEventListener('click', () => switchTab('create'));
+tabJoin.addEventListener('click', () => switchTab('join'));
+
+function switchTab(tab) {
+  [tabAI, tabCreate, tabJoin].forEach(b => b.classList.remove('active'));
+  viewAI.style.display = 'none';
+  viewCreate.style.display = 'none';
+  viewJoin.style.display = 'none';
+
+  if (tab === 'ai') {
+    tabAI.classList.add('active');
+    viewAI.style.display = 'block';
+  } else if (tab === 'create') {
+    tabCreate.classList.add('active');
+    viewCreate.style.display = 'block';
+  } else {
+    tabJoin.classList.add('active');
+    viewJoin.style.display = 'block';
   }
 }
 
-// Multiplayer Modal & WebRTC
-const p2pModal = document.getElementById('p2pModal');
-const multiplayerBtn = document.getElementById('multiplayerBtn');
-const closeModalBtn = document.getElementById('closeModalBtn');
-const createRoomBtn = document.getElementById('createRoomBtn');
-const roomLinkBox = document.getElementById('roomLinkBox');
-const joinRoomBtn = document.getElementById('joinRoomBtn');
-const roomCodeInput = document.getElementById('roomCodeInput');
-const connectionStatus = document.getElementById('connectionStatus');
+document.getElementById('openLobbyBtn').addEventListener('click', () => {
+  lobbyModal.style.display = 'flex';
+});
 
-multiplayerBtn.addEventListener('click', () => { p2pModal.style.display = 'flex'; });
-closeModalBtn.addEventListener('click', () => { p2pModal.style.display = 'none'; });
+// Start AI Match
+document.getElementById('startAIBtn').addEventListener('click', () => {
+  const nick = document.getElementById('nicknameInput').value.trim() || 'Explorer-1';
+  state.mode = 'ai';
+  state.p1Name = nick;
+  state.p2Name = 'AI Globetrotter';
+  state.myNum = 1;
+  resetGameSession();
+  lobbyModal.style.display = 'none';
+});
 
-function initP2PEngine() {
+// Host P2P Room
+document.getElementById('hostRoomBtn').addEventListener('click', () => {
+  const nick = document.getElementById('nicknameInput').value.trim() || 'Explorer-1';
+  const customRoom = document.getElementById('roomNameInput').value.trim();
+  state.mode = 'p2p';
+  state.isHost = true;
+  state.myNum = 1;
+  state.p1Name = nick;
+
+  initP2P();
+  const roomCode = peerEngine.initHost(customRoom);
+  
+  const waitingArea = document.getElementById('hostWaitingArea');
+  const shareLinkInput = document.getElementById('shareLinkInput');
+  waitingArea.style.display = 'block';
+
+  const url = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+  shareLinkInput.value = url;
+});
+
+// Join P2P Room
+document.getElementById('connectRoomBtn').addEventListener('click', () => {
+  const nick = document.getElementById('nicknameInput').value.trim() || 'Explorer-2';
+  const code = document.getElementById('joinRoomCodeInput').value.trim();
+  if (!code) {
+    alert("Please enter a room code!");
+    return;
+  }
+  state.mode = 'p2p';
+  state.isHost = false;
+  state.myNum = 2;
+  state.p2Name = nick;
+
+  initP2P();
+  peerEngine.initJoin(code);
+});
+
+function initP2P() {
+  if (peerEngine) peerEngine.destroy();
+
   peerEngine = new PeerEngine({
     gamePrefix: 'c4w',
-    onStatus: (status) => {
-      connectionStatus.textContent = status;
+    onStatus: (msg) => {
+      const statusEl = document.getElementById('joinStatusText');
+      if (statusEl) statusEl.textContent = msg;
     },
     onConnected: ({ isHost }) => {
-      isOnline = true;
-      myPlayerNum = isHost ? 1 : 2;
-      connectionStatus.textContent = `Online! You are Player ${myPlayerNum} (${isHost ? 'Blue' : 'Red'})`;
-      setTimeout(() => { p2pModal.style.display = 'none'; }, 1000);
+      lobbyModal.style.display = 'none';
+      if (isHost) {
+        // Send state to joined player
+        peerEngine.send({
+          type: 'HELLO_HOST',
+          p1Name: state.p1Name,
+          state: state
+        });
+      } else {
+        peerEngine.send({
+          type: 'HELLO_CLIENT',
+          p2Name: state.p2Name
+        });
+      }
       updateUI();
     },
     onData: (data) => {
-      if (data.type === 'STATE_UPDATE') {
-        gameState = data.state;
-        renderBoard();
+      if (data.type === 'HELLO_HOST') {
+        state = data.state;
+        state.p1Name = data.p1Name;
+        state.myNum = 2;
+        updateVisuals();
+        updateUI();
+      } else if (data.type === 'HELLO_CLIENT') {
+        state.p2Name = data.p2Name;
+        peerEngine.send({ type: 'SYNC_STATE', state });
+        updateUI();
+      } else if (data.type === 'SYNC_STATE') {
+        state = data.state;
+        updateVisuals();
+        updateUI();
       }
     },
     onDisconnected: () => {
-      isOnline = false;
-      alert("Opponent disconnected!");
+      alert("Opponent has disconnected from the expedition!");
     }
   });
 }
 
-createRoomBtn.addEventListener('click', () => {
-  if (!peerEngine) initP2PEngine();
-  const roomCode = peerEngine.initHost();
-  const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
-  roomLinkBox.style.display = 'block';
-  roomLinkBox.innerHTML = `Room Code: <strong>${roomCode.toUpperCase()}</strong><br><a href="${shareUrl}" target="_blank" style="color:#38bdf8; font-size:0.8rem;">${shareUrl}</a>`;
-});
+function resetGameSession() {
+  state.claimed = {};
+  state.p1Routes = [];
+  state.p2Routes = [];
+  state.p1Score = 0;
+  state.p2Score = 0;
+  state.p1Span = 0;
+  state.p2Span = 0;
+  state.currentTurn = 1;
+  state.gameOver = false;
+  state.p1Tickets = { train: 3, flight: 3, ferry: 2, road: 3 };
+  state.p2Tickets = { train: 3, flight: 3, ferry: 2, road: 3 };
 
-joinRoomBtn.addEventListener('click', () => {
-  const code = roomCodeInput.value.trim();
-  if (!code) return;
-  if (!peerEngine) initP2PEngine();
-  peerEngine.initJoin(code);
-});
+  // Assign 2 random missions each
+  const shuffled = [...MISSIONS_POOL].sort(() => 0.5 - Math.random());
+  state.p1Missions = [shuffled[0], shuffled[1]].map(m => ({ ...m, completed: false }));
+  state.p2Missions = [shuffled[2], shuffled[3]].map(m => ({ ...m, completed: false }));
 
-// Auto-join from URL parameter
+  // Reset lines
+  Object.keys(polylines).forEach(rid => {
+    const line = polylines[rid];
+    line.setStyle({
+      color: '#94a3b8',
+      weight: 4,
+      opacity: 0.6,
+      dashArray: '6, 8'
+    });
+  });
+
+  updateUI();
+}
+
+// Window load init
 window.addEventListener('DOMContentLoaded', () => {
-  renderBoard();
+  initMap();
+  resetGameSession();
+
+  // Check URL query parameters for direct room joining
   const params = new URLSearchParams(window.location.search);
-  const roomCode = params.get('room');
-  if (roomCode) {
-    p2pModal.style.display = 'flex';
-    roomCodeInput.value = roomCode;
-    initP2PEngine();
-    peerEngine.initJoin(roomCode);
+  const room = params.get('room');
+  if (room) {
+    lobbyModal.style.display = 'flex';
+    switchTab('join');
+    document.getElementById('joinRoomCodeInput').value = room;
   }
 });
