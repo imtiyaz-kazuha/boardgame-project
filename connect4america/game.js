@@ -144,6 +144,8 @@ let state = {
   currentTurn: 1,
   p1Name: 'Player 1',
   p2Name: 'AI Conductor',
+  p1Color: '#38bdf8', // Team Blue
+  p2Color: '#f43f5e', // Team Red
   p1Score: 0,
   p2Score: 0,
   p1TotalKm: 0,
@@ -612,11 +614,26 @@ function updateVisuals() {
     const item = polylines[rid];
     const claim = state.claimed[rid];
     if (claim) {
+      // Determine claimed team color
+      const teamColor = claim.player === 1 ? state.p1Color : state.p2Color;
+
+      // Visual distinction based on mode placed so players know what vehicle was placed
+      // Train = Solid, Road = Dense Dash, Flight = Double Dot
+      let placedDash = null;
+      let placedWeight = 6;
+      if (claim.mode === 'road') {
+        placedDash = '8, 4';
+        placedWeight = 5;
+      } else if (claim.mode === 'flight') {
+        placedDash = '2, 6';
+        placedWeight = 6;
+      }
+
       item.line.setStyle({
-        color: claim.player === 1 ? '#38bdf8' : '#f43f5e',
-        weight: 6,
+        color: teamColor,
+        weight: placedWeight,
         opacity: 0.95,
-        dashArray: null
+        dashArray: placedDash
       });
     } else {
       item.line.setStyle({
@@ -632,8 +649,13 @@ function updateVisuals() {
 function updateUI() {
   document.getElementById('scoreP1').textContent = `${state.p1Score} pts`;
   document.getElementById('scoreP2').textContent = `${state.p2Score} pts`;
-  document.getElementById('labelP1').textContent = state.p1Name;
-  document.getElementById('labelP2').textContent = state.p2Name;
+  document.getElementById('labelP1').textContent = `${state.p1Name} (${state.p1Color === '#38bdf8' ? 'Blue' : 'Red'})`;
+  document.getElementById('labelP2').textContent = `${state.p2Name} (${state.p2Color === '#38bdf8' ? 'Blue' : 'Red'})`;
+  document.getElementById('labelP1').style.color = state.p1Color;
+  document.getElementById('labelP2').style.color = state.p2Color;
+
+  document.getElementById('circP1Bar').style.background = state.p1Color;
+  document.getElementById('circP2Bar').style.background = state.p2Color;
 
   document.getElementById('subP1').textContent = `States: ${state.p1StatesCount}/20 • ${state.p1TotalKm.toLocaleString()} km`;
   document.getElementById('subP2').textContent = `States: ${state.p2StatesCount}/20 • ${state.p2TotalKm.toLocaleString()} km`;
@@ -1015,12 +1037,24 @@ function resetGameSession() {
   state.p2Tickets = { train: 3, road: 3, flight: 2, joker: 1 };
   state.completedLog = [];
 
+  // Randomize Team Colors (Blue vs Red)
+  const isP1Blue = Math.random() < 0.5;
+  state.p1Color = isP1Blue ? '#38bdf8' : '#f43f5e';
+  state.p2Color = isP1Blue ? '#f43f5e' : '#38bdf8';
+  const myTeamName = (state.myNum === 1 ? state.p1Color : state.p2Color) === '#38bdf8' ? 'TEAM BLUE 🔵' : 'TEAM RED 🔴';
+
   // Deal 4 shared high-stakes quests on the board
   const shuffled = [...MISSIONS_POOL].sort(() => 0.5 - Math.random());
   state.activeMissions = [shuffled[0], shuffled[1], shuffled[2], shuffled[3]];
 
+  renderCityPins();
   updateVisuals();
   updateUI();
+
+  // Prompt player what team color they are playing
+  setTimeout(() => {
+    showToast("Color Assigned!", `You are playing as ${myTeamName}!`, "🎲");
+  }, 400);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
