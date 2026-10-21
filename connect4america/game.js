@@ -344,13 +344,6 @@ function getAffordableMode(playerNum, route) {
 
   return null;
 }
-    if (regular + jokers >= route.cost) {
-      return { mode, useJokers: Math.max(0, route.cost - regular) };
-    }
-  }
-
-  return null;
-}
 
 // Claim Route
 function handleClaimRoute(routeId) {
@@ -608,7 +601,6 @@ function updateTurnNeonBorder() {
   } else {
     neon.classList.remove('neon-on');
   }
-}
 }
 
 // Adaptive Strategic AI
