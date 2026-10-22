@@ -647,6 +647,17 @@ function evaluateBotReactions(stage) {
       });
       renderTableLayout();
 
+      // CRITICAL FIX: If human is the actor OR human cannot react, all opponents are bots and they just allowed the move!
+      // Resolve the action immediately instead of hanging in dead air!
+      if (!canHumanReact) {
+        clearReactionTimer();
+        setTimeout(() => {
+          if (coupState.pendingAction) {
+            applyActionEffect(action);
+          }
+        }, 800);
+      }
+
     } else if (stage === 'block_challenge') {
       // Check if any bot challenges the blocker
       for (const bot of livingBots) {
@@ -676,6 +687,15 @@ function evaluateBotReactions(stage) {
         }
       });
       renderTableLayout();
+
+      // If human cannot challenge the block (e.g. human was the blocker), block holds automatically!
+      if (!canHumanReact) {
+        clearReactionTimer();
+        setTimeout(() => {
+          showToast("Block Unchallenged", `Block held! Action was prevented.`, "🛡️");
+          finishActionTurn();
+        }, 800);
+      }
     }
   }, 2400); // 2.4s thinking delay gives human plenty of time to read and challenge!
 }
