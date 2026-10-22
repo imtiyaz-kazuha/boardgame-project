@@ -299,6 +299,34 @@
           </button>
         </div>
       </article>
+
+      <!-- Game 5: Coup (Dystopian Syndicate) -->
+      <article class="glass-panel game-card">
+        <div>
+          <div class="game-art-banner" style="background: linear-gradient(135deg, #4a044e, #1e1b4b, #020617);">
+            <div class="game-badge-status">● Live 2-6P P2P + AI</div>
+            <div style="font-size: 4rem;">👑</div>
+          </div>
+          <div class="game-meta">
+            <span class="meta-tag">👥 2-6 Players</span>
+            <span class="meta-tag">🤫 Bluff & Deceive</span>
+            <span class="meta-tag">⚔️ Call Challenges</span>
+            <span class="meta-tag">🤖 Tactical Bots</span>
+          </div>
+          <h2 class="game-title">Coup: Syndicate</h2>
+          <p class="game-desc">
+            The ultimate game of bluffing and political deception! Gather around a virtual circular table with up to 6 players. Claim influence you don't possess, call out rival liars, assassinate enemies, and launch unblockable coups to rule the syndicate!
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a href="../coup/" class="btn btn-primary" style="flex: 2; background: linear-gradient(135deg, #a855f7, #ec4899);">
+            Play Coup →
+          </a>
+          <button id="coupRulesBtn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;" onclick="openCoupRulesModal()">
+            📖 Rules
+          </button>
+        </div>
+      </article>
     </section>
   </main>
 
@@ -382,6 +410,47 @@
     </div>
   </div>
 
+  <!-- Coup Rules Modal -->
+  <div id="coupRulesModal" class="glass-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div class="glass-panel" style="width:100%; max-width:620px; max-height:85vh; overflow-y:auto; padding:28px; border-radius:var(--radius-lg); position:relative;">
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg, #a855f7, #ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        👑 How to Play: Coup Syndicate
+      </h2>
+      
+      <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎯 Objective</h4>
+          <p>Eliminate the influence of all other players and be the <strong>last player standing</strong> with any secret influence cards remaining.</p>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎭 The 5 Syndicate Roles</h4>
+          <ul style="padding-left:20px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+            <li><strong>👑 Duke:</strong> Take 3 coins from Treasury. Blocks Foreign Aid.</li>
+            <li><strong>🗡️ Assassin:</strong> Pay 3 coins to assassinate another player's card. (Can be blocked by Contessa).</li>
+            <li><strong>📜 Captain:</strong> Steal 2 coins from any rival. Blocks Stealing.</li>
+            <li><strong>🛡️ Contessa:</strong> Blocks assassination attempts on yourself.</li>
+            <li><strong>🔍 Ambassador:</strong> Draw 2 cards from court deck to exchange. Blocks Stealing.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🤫 Bluffing & Challenges</h4>
+          <p>You can claim to hold <strong>any character card</strong>, even if you don't actually have it! Any rival can shout <strong>⚔️ Challenge!</strong> If caught lying, you lose a card. If truthful, the challenger loses a card!</p>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">💥 Launching a Coup</h4>
+          <p>Pay 7 coins to launch an <strong>unblockable, unchallengeable Coup</strong> against any player to eliminate one of their influence cards. Mandatory if you hold 10+ coins!</p>
+        </section>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #a855f7, #ec4899);" onclick="closeCoupRulesModal()">
+        Got it! Close Rules
+      </button>
+    </div>
+  </div>
+
   <script>
     function openRulesModal() {
       document.getElementById('rulesModal').style.display = 'flex';
@@ -394,6 +463,12 @@
     }
     function closeLudoRulesModal() {
       document.getElementById('ludoRulesModal').style.display = 'none';
+    }
+    function openCoupRulesModal() {
+      document.getElementById('coupRulesModal').style.display = 'flex';
+    }
+    function closeCoupRulesModal() {
+      document.getElementById('coupRulesModal').style.display = 'none';
     }
   </script>
 
