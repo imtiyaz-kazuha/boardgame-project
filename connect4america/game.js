@@ -673,6 +673,14 @@ function playAITurn() {
         }
       });
 
+      // Tactical blocking: if human player is 1 hop away from connecting a mission, prioritize blocking that route
+      state.p1Routes.forEach(p1Rid => {
+        const p1R = US_ROUTES.find(x => x.id === p1Rid);
+        if (p1R && (p1R.from === route.from || p1R.to === route.to || p1R.from === route.to || p1R.to === route.from)) {
+          weight += 2000; // Counter-expansion & blocking
+        }
+      });
+
       // Bonus for expanding into new states
       const cityMap = {};
       US_CITIES.forEach(c => cityMap[c.id] = c);
@@ -688,9 +696,13 @@ function playAITurn() {
         weight += 3500;
       }
 
-      // Conserve rare jokers
+      // Conserve rare jokers unless high value route (>= 1500 km or mission link)
       if (match.useJokers > 0) {
-        weight -= 2000;
+        if (route.km > 1500) {
+          weight -= 500;
+        } else {
+          weight -= 2500;
+        }
       }
 
       if (weight > highestScore) {
@@ -739,14 +751,15 @@ function playAITurn() {
   }
 }
 
-// Draw Tickets (Train, Road, Flight, with rare Joker)
+// Draw Tickets (Ratio Flight:Road:Train:Joker = 3:5:4:1, Total = 13 units)
 function drawRandomTickets(playerNum) {
   const rollTicket = () => {
-    const rand = Math.random();
-    if (rand < 0.40) return 'train';
-    if (rand < 0.75) return 'road';
-    if (rand < 0.92) return 'flight';
-    return 'joker'; // 8% chance of Joker
+    // Total weight = 3 (flight) + 5 (road) + 4 (train) + 1 (joker) = 13
+    const rand = Math.floor(Math.random() * 13);
+    if (rand < 3) return 'flight';         // 3/13 (~23.1%)
+    if (rand < 8) return 'road';           // 5/13 (~38.5%)
+    if (rand < 12) return 'train';         // 4/13 (~30.8%)
+    return 'joker';                        // 1/13 (~7.7%)
   };
 
   const t1 = rollTicket();
