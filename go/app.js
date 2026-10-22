@@ -288,7 +288,8 @@ createRoomForm.addEventListener('submit', (e) => {
 function createRoomAsHost(roomName, size, komi) {
   currentRoomName = roomName;
   isHost = true;
-  myRole = BLACK;
+  // Randomize host starting color (Nigiri fair draw)
+  myRole = Math.random() < 0.5 ? BLACK : WHITE;
 
   engine = new GoEngine(size, komi);
   resetClocks();
@@ -328,7 +329,8 @@ function createRoomAsHost(roomName, size, komi) {
         komi: engine.komi,
         clockConfig: clockConfig,
         roomName: currentRoomName,
-        hostUsername: myUsername
+        hostUsername: myUsername,
+        guestRole: myRole === BLACK ? WHITE : BLACK
       });
     });
   });
@@ -387,6 +389,9 @@ function handleIncomingData(data) {
       clockConfig = data.clockConfig;
       currentRoomName = data.roomName;
       opponentUsername = data.hostUsername || "Host";
+      if (data.guestRole) {
+        myRole = data.guestRole;
+      }
       resetClocks();
       startGame();
       break;
@@ -478,8 +483,8 @@ function handleIncomingData(data) {
 }
 
 function getPlayerName(color) {
-  if (color === BLACK) return isHost ? myUsername : opponentUsername;
-  return isHost ? opponentUsername : myUsername;
+  if (color === myRole) return myUsername;
+  return opponentUsername;
 }
 
 function startGame() {
@@ -490,16 +495,16 @@ function startGame() {
   activeRoomTag.textContent = `Room: ${currentRoomName}`;
   displayKomiEl.textContent = engine.komi;
 
-  if (isHost) {
+  if (myRole === BLACK) {
     blackPlayerNameEl.textContent = `${myUsername}`;
     whitePlayerNameEl.textContent = `${opponentUsername}`;
-    blackRoleLabel.textContent = "You";
-    whiteRoleLabel.textContent = "Opponent";
+    blackRoleLabel.textContent = "You (Black ⚫)";
+    whiteRoleLabel.textContent = "Opponent (White ⚪)";
   } else {
     blackPlayerNameEl.textContent = `${opponentUsername}`;
     whitePlayerNameEl.textContent = `${myUsername}`;
-    blackRoleLabel.textContent = "Opponent";
-    whiteRoleLabel.textContent = "You";
+    blackRoleLabel.textContent = "Opponent (Black ⚫)";
+    whiteRoleLabel.textContent = "You (White ⚪)";
   }
 
   // Clear move history UI

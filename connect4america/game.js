@@ -1151,7 +1151,8 @@ function resetGameSession() {
   state.p2TotalKm = 0;
   state.p1StatesCount = 0;
   state.p2StatesCount = 0;
-  state.currentTurn = 1;
+  // Randomize first player to start (1 or 2)
+  state.currentTurn = Math.random() < 0.5 ? 1 : 2;
   state.gameOver = false;
   state.p1Tickets = { train: 3, road: 3, flight: 2, joker: 1 };
   state.p2Tickets = { train: 3, road: 3, flight: 2, joker: 1 };
@@ -1171,9 +1172,15 @@ function resetGameSession() {
   updateVisuals();
   updateUI();
 
+  // If AI starts first, trigger AI move
+  if (state.mode === 'ai' && state.currentTurn === 2) {
+    setTimeout(aiTurn, 1000);
+  }
+
   // Prompt player what team color they are playing
   setTimeout(() => {
-    showToast("Color Assigned!", `You are playing as ${myTeamName}!`, "🎲");
+    const starterName = state.currentTurn === state.myNum ? "You start first!" : `${state.mode === 'ai' ? 'AI' : 'Opponent'} starts first!`;
+    showToast("Match Started!", `You are ${myTeamName}. ${starterName}`, "🎲");
   }, 400);
 }
 

@@ -1291,13 +1291,20 @@ function initMultiP2P() {
 }
 
 function resetMatch() {
-  gameState.currentTurn = 0;
+  // Fair randomized starting turn (0 to 3)
+  gameState.currentTurn = Math.floor(Math.random() * 4);
   gameState.diceRoll = null;
   gameState.hasRolled = false;
   gameState.winner = null;
   gameState.players.forEach(p => p.tokens = [-1, -1, -1, -1]);
   renderBoard();
   updateUI();
+
+  // If first turn belongs to a bot, trigger bot turn
+  const activeP = gameState.players[gameState.currentTurn];
+  if (activeP && activeP.isBot) {
+    setTimeout(handleBotTurn, 900);
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {

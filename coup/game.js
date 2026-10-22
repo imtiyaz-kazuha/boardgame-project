@@ -165,7 +165,8 @@ function startMatch(totalPlayers = 6, humanCount = 1) {
 
   coupState.treasury = 50 - (totalPlayers * 2);
   coupState.deck = deck;
-  coupState.currentTurn = 0;
+  // Fair randomized starting turn across all players
+  coupState.currentTurn = Math.floor(Math.random() * totalPlayers);
   coupState.winner = null;
   coupState.pendingAction = null;
   coupState.reactionState = null;
