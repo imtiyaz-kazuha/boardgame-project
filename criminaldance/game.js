@@ -384,7 +384,7 @@ function initGameSession(playerCount = 4, myName = 'Detective Holmes') {
   showToast("Crime Scene Discovered!", `${starter.name} holds the First Discovery card and starts the investigation!`, "🔍");
 
   if (starter.isBot) {
-    setTimeout(handleBotTurn, 1400);
+    setTimeout(handleBotTurn, 2200);
   }
 }
 
@@ -619,13 +619,13 @@ function executeCardEffect(actor, card) {
 
   // 6. INFORMATION TRADE: Everyone passes 1 card to the left!
   if (card.id === 'info_trade') {
-    executeInformationTrade();
+    executeInformationTrade(actor);
     return;
   }
 
   // 7. RUMOR / GOSSIP: Draw 1 card from player on right!
   if (card.id === 'rumor') {
-    executeRumorExchange();
+    executeRumorExchange(actor);
     return;
   }
 
@@ -671,7 +671,8 @@ function nextTurn() {
   setAnnouncement(`It is <strong>${nextP.name}</strong>'s turn to investigate.`);
 
   if (nextP.isBot) {
-    setTimeout(handleBotTurn, 1400);
+    // Slower, comfortable AI pacing (2.4s) so human can read the played cards and track the state!
+    setTimeout(handleBotTurn, 2400);
   }
 }
 
@@ -810,9 +811,9 @@ function openWitnessModal() {
     btn.addEventListener('click', () => {
       modal.style.display = 'none';
       pendingHumanCardPlayed = null;
-      const cardNames = p.hand.map(c => c.name).join(', ');
-      alert(`👁️ WITNESS INTEL:\n\n${p.name}'s hand contains:\n• ${cardNames}`);
-      nextTurn();
+      showIntelModal(`👁️ Witness: ${p.name}'s Hand`, `You secretly interrogated the witness! Here are all cards currently held by ${p.name}:`, p.hand, () => {
+        nextTurn();
+      });
     });
     grid.appendChild(btn);
   });
@@ -820,15 +821,51 @@ function openWitnessModal() {
   modal.style.display = 'flex';
 }
 
+// Custom In-Game Intel Reveal Dialog (No browser alert)
+function showIntelModal(titleText, descText, cardsArray, onCloseCallback) {
+  const modal = document.getElementById('intelModal');
+  const title = document.getElementById('intelModalTitle');
+  const desc = document.getElementById('intelModalDesc');
+  const container = document.getElementById('intelCardsContainer');
+  const closeBtn = document.getElementById('closeIntelModalBtn');
+
+  title.textContent = titleText;
+  desc.textContent = descText;
+  container.innerHTML = '';
+
+  cardsArray.forEach(card => {
+    const cardEl = document.createElement('div');
+    cardEl.className = `game-card ${card.cardClass || ''}`;
+    cardEl.style.cursor = 'default';
+    cardEl.innerHTML = `
+      <div class="card-art-box"><img src="${card.img}" alt="${card.name}"></div>
+      <div class="card-info-box">
+        <div class="card-title-text">${card.name}</div>
+        <div class="card-desc-text">${card.desc}</div>
+      </div>
+    `;
+    container.appendChild(cardEl);
+  });
+
+  modal.style.display = 'flex';
+
+  closeBtn.onclick = () => {
+    modal.style.display = 'none';
+    if (onCloseCallback) onCloseCallback();
+  };
+}
+
 // Information Trade (Everyone simultaneously passes 1 card to the left)
-function executeInformationTrade() {
-  showToast("🔄 Information Trade!", "Everyone must choose 1 card to pass to their left neighbor!", "🔄");
-  setAnnouncement("<strong>Information Trade:</strong> Passing cards to the left...");
+function executeInformationTrade(actor = { name: 'Someone' }) {
+  showToast("🔄 Information Trade!", `Because ${actor.name} played Information Trade, every player must pass 1 card to the left!`, "🔄");
+  setAnnouncement(`<strong>${actor.name}</strong> triggered <strong>Information Trade</strong>: Everyone passes 1 card to the left!`);
 
   // If human has cards, ask human to pick 1 card to pass
   const me = gameState.players[gameState.myPlayerIdx];
   if (me.hand.length > 0) {
-    promptCardPassSelection("Information Trade", "Choose 1 card to pass to your left neighbor:", (chosenCardIdx) => {
+    const title = `🔄 Information Trade (${actor.name})`;
+    const desc = `Because ${actor.name} played Information Trade, choose 1 card from your hand to pass to your left neighbor:`;
+    promptCardPassSelection(title, desc, (chosenCardIdx) => {
       completeTradeLeft(chosenCardIdx);
     });
   } else {
@@ -913,8 +950,9 @@ function completeTradeLeft(humanChosenIdx) {
 }
 
 // Rumor Exchange (Every player draws 1 random card from player on right)
-function executeRumorExchange() {
-  showToast("🤫 Rumor Spreads!", "Everyone secretly takes 1 card from their right neighbor!", "👂");
+function executeRumorExchange(actor = { name: 'Someone' }) {
+  showToast("🤫 Rumor Spreads!", `Because ${actor.name} played Rumor, everyone secretly takes 1 card from their right neighbor!`, "👂");
+  setAnnouncement(`<strong>${actor.name}</strong> triggered <strong>Rumor</strong>: Taking 1 card from right neighbor!`);
   playSound('pass_card');
 
   const total = gameState.players.length;
@@ -1071,7 +1109,7 @@ function botExecuteDetective(bot) {
   suspects.sort((a, b) => a.hand.length - b.hand.length);
   const target = suspects[0];
   showToast("Accusation!", `${bot.name} accuses ${target.name} with the Detective card!`, "🕵️");
-  setTimeout(() => resolveAccusation(bot, target, 'detective'), 800);
+  setTimeout(() => resolveAccusation(bot, target, 'detective'), 1800);
 }
 
 function botExecutePolice(bot) {
@@ -1083,7 +1121,7 @@ function botExecutePolice(bot) {
   suspects.sort((a, b) => a.hand.length - b.hand.length);
   const target = suspects[0];
   showToast("Police Interrogation!", `👮 ${bot.name} questions ${target.name} directly!`, "🚨");
-  setTimeout(() => resolveAccusation(bot, target, 'police'), 800);
+  setTimeout(() => resolveAccusation(bot, target, 'police'), 1800);
 }
 
 function botExecuteDog(bot) {
@@ -1096,7 +1134,7 @@ function botExecuteDog(bot) {
   const target = suspects[0];
   const cardIdx = Math.floor(Math.random() * target.hand.length);
   showToast("Police Dog!", `${bot.name} sends the K-9 to sniff Card #${cardIdx + 1} of ${target.name}!`, "🐕");
-  setTimeout(() => resolveDogSniff(bot, target, cardIdx), 800);
+  setTimeout(() => resolveDogSniff(bot, target, cardIdx), 1800);
 }
 
 function botExecuteWitness(bot) {
