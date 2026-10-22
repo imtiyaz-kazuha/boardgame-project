@@ -138,7 +138,10 @@ function initCoup() {
   vfxCanvas = document.getElementById('vfxCanvas');
   vfxCtx = vfxCanvas.getContext('2d');
   resizeVfxCanvas();
-  window.addEventListener('resize', resizeVfxCanvas);
+  window.addEventListener('resize', () => {
+    resizeVfxCanvas();
+    renderTableLayout();
+  });
 
   setupUIEventListeners();
   startVfxLoop();
