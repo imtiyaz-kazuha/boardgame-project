@@ -339,8 +339,17 @@
       
       <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
         <section>
-          <h4 style="color:#f8fafc; margin-bottom:4px;">🎯 Objective & Completion</h4>
-          <p>The game reaches completion when <strong>all 20 key US states are connected by either player</strong> (tracked on the top progress bar). At completion, whoever holds the highest score from route distance and completed secret missions wins the championship!</p>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎯 Objective & Game End</h4>
+          <p>The expedition concludes whenever <strong>fewer than 2 unclaimed paths remain on the map</strong> (or all routes are exhausted). The player with the highest total score wins!</p>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🗺️ States & Route Points Calculation</h4>
+          <p>The board spans <strong>20 strategic US hub cities across 17 distinct states and districts</strong>. Points are calculated dynamically based on real geographic distance:</p>
+          <ul style="padding-left:20px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+            <li><strong>Route Score:</strong> \(\approx 1\text{ pt per } 80\text{ km}\) of true Haversine distance (e.g. Seattle to San Francisco is 1,094 km = <strong>+14 pts</strong>).</li>
+            <li><strong>Shared Quests:</strong> Completing shared cross-country bounties awards huge flat bonuses (<strong>+12 to +24 pts</strong>).</li>
+          </ul>
         </section>
 
         <section>

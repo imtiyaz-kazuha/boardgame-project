@@ -413,9 +413,12 @@ function confirmClaimRoute(routeId, chosenMode, useJokers) {
   renderCityPins();
   updateVisuals();
 
-  // Check Game End
-  if (state.p1StatesCount >= 20 || state.p2StatesCount >= 20 || Object.keys(state.claimed).length >= US_ROUTES.length) {
-    endGame(state.p1StatesCount >= state.p2StatesCount ? 1 : 2, "connected all key American states");
+  // Check Game End: concludes when less than 2 unclaimed paths remain on the board
+  const totalClaimedCount = Object.keys(state.claimed).length;
+  const remainingRoutes = US_ROUTES.length - totalClaimedCount;
+  if (remainingRoutes < 2) {
+    const endReason = `reached network capacity (only ${remainingRoutes} path${remainingRoutes === 1 ? '' : 's'} remaining)`;
+    endGame(state.p1Score >= state.p2Score ? 1 : 2, endReason);
     return;
   }
 
@@ -568,17 +571,23 @@ function updateUI() {
   document.getElementById('circP1Bar').style.background = state.p1Color;
   document.getElementById('circP2Bar').style.background = state.p2Color;
 
-  document.getElementById('subP1').textContent = `States: ${state.p1StatesCount}/20 • ${state.p1TotalKm.toLocaleString()} km`;
-  document.getElementById('subP2').textContent = `States: ${state.p2StatesCount}/20 • ${state.p2TotalKm.toLocaleString()} km`;
+  const totalRoutesCount = US_ROUTES.length;
+  const claimedCount = Object.keys(state.claimed).length;
+  const remainingRoutes = Math.max(0, totalRoutesCount - claimedCount);
 
-  // HUD Progress
-  const p1Pct = Math.min(100, Math.round((state.p1StatesCount / 20) * 100));
-  const p2Pct = Math.min(100, Math.round((state.p2StatesCount / 20) * 100));
-  document.getElementById('hudP1Name').textContent = `${state.p1Name}: ${state.p1StatesCount} / 20 States (${p1Pct}%)`;
-  document.getElementById('hudP2Name').textContent = `${state.p2Name}: ${state.p2StatesCount} / 20 States (${p2Pct}%)`;
+  document.getElementById('subP1').textContent = `States: ${state.p1StatesCount}/17 • ${state.p1TotalKm.toLocaleString()} km`;
+  document.getElementById('subP2').textContent = `States: ${state.p2StatesCount}/17 • ${state.p2TotalKm.toLocaleString()} km`;
 
-  document.getElementById('circP1Bar').style.width = `${p1Pct}%`;
-  document.getElementById('circP2Bar').style.width = `${p2Pct}%`;
+  // HUD Progress: tracks remaining unclaimed routes towards the < 2 end condition
+  const routesProgressPct = Math.min(100, Math.round((claimedCount / (totalRoutesCount - 1)) * 100));
+  document.getElementById('hudP1Name').textContent = `${state.p1Name}: ${state.p1Score} pts (${state.p1StatesCount} states)`;
+  document.getElementById('hudP2Name').textContent = `${state.p2Name}: ${state.p2Score} pts (${state.p2StatesCount} states) • ${remainingRoutes} paths left`;
+
+  const p1Share = (state.p1Score + state.p2Score) > 0 
+    ? Math.round((state.p1Score / (state.p1Score + state.p2Score)) * 100) 
+    : 50;
+  document.getElementById('circP1Bar').style.width = `${p1Share}%`;
+  document.getElementById('circP2Bar').style.width = `${100 - p1Share}%`;
 
   // Turn pill
   const turnPill = document.getElementById('turnPill');
@@ -712,8 +721,10 @@ function playAITurn() {
     renderCityPins();
     updateVisuals();
 
-    if (state.p2StatesCount >= 20) {
-      endGame(2, "connected all 20 key US states across the nation");
+    const totalClaimedCount = Object.keys(state.claimed).length;
+    const remainingRoutes = US_ROUTES.length - totalClaimedCount;
+    if (remainingRoutes < 2) {
+      endGame(state.p1Score >= state.p2Score ? 1 : 2, `reached network capacity (only ${remainingRoutes} path${remainingRoutes === 1 ? '' : 's'} remaining)`);
       return;
     }
 
@@ -780,7 +791,7 @@ function endGame(winnerNum, reason) {
   }
 
   setTimeout(() => {
-    alert(`🏁 EXPEDITION COMPLETE!\n\n${winnerName} ${reason}!\n\nFinal Scores:\n${state.p1Name}: ${p1Final} pts (${state.p1StatesCount}/20 states)\n${state.p2Name}: ${p2Final} pts (${state.p2StatesCount}/20 states)\n\n🏆 Grand Champion: ${grandWinner}!`);
+    alert(`🏁 EXPEDITION COMPLETE!\n\n${winnerName} ${reason}!\n\nFinal Scores:\n${state.p1Name}: ${p1Final} pts (${state.p1StatesCount}/17 states)\n${state.p2Name}: ${p2Final} pts (${state.p2StatesCount}/17 states)\n\n🏆 Grand Champion: ${grandWinner}!`);
   }, 200);
 }
 
