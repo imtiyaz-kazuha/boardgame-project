@@ -71,17 +71,17 @@
       justify-content: center;
       z-index: 10;
       pointer-events: none;
-      width: 220px;
+      width: 240px;
       text-align: center;
     }
 
     .center-discard-card {
-      width: 100px;
-      height: 140px;
-      border-radius: 10px;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      background: #111827;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+      width: 125px;
+      height: 175px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      background: #0f172a;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.85);
       overflow: hidden;
       position: relative;
       display: flex;
@@ -91,22 +91,25 @@
     }
     .center-discard-card img {
       width: 100%;
-      height: 90px;
+      height: 100%;
       object-fit: cover;
+      object-position: center top;
+      display: block;
     }
 
     .center-announcement {
       margin-top: 10px;
       padding: 6px 14px;
-      background: rgba(0, 0, 0, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.45); /* Highly transparent glass backdrop */
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 20px;
       font-size: 0.82rem;
       font-weight: 600;
-      color: #94a3b8;
-      backdrop-filter: blur(8px);
-      max-width: 260px;
+      color: #cbd5e1;
+      backdrop-filter: blur(10px);
+      max-width: 280px;
       line-height: 1.4;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
 
     /* Seats around the Table */
@@ -194,29 +197,42 @@
 
     /* Full Card Component */
     .game-card {
-      width: 105px;
-      height: 155px;
-      border-radius: 12px;
+      width: 130px;
+      height: 195px;
+      border-radius: 14px;
       background: #0f172a;
-      border: 2px solid rgba(255, 255, 255, 0.18);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.65);
       display: flex;
       flex-direction: column;
       overflow: hidden;
       cursor: pointer;
-      transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       position: relative;
       flex-shrink: 0;
     }
     .game-card:hover {
-      transform: translateY(-8px) scale(1.04);
-      box-shadow: 0 12px 28px rgba(0,0,0,0.9), 0 0 15px rgba(56, 189, 248, 0.4);
+      transform: translateY(-12px) scale(1.08);
+      box-shadow: 0 16px 36px rgba(0,0,0,0.9), 0 0 25px rgba(56, 189, 248, 0.5);
       border-color: #38bdf8;
+      z-index: 60;
+    }
+    /* When it is your turn, cards zoom up into your face! */
+    .my-turn-zoom .game-card:not(.disabled) {
+      transform: translateY(-8px) scale(1.05);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.85), 0 0 20px rgba(56, 189, 248, 0.4);
+      border-color: rgba(56, 189, 248, 0.8);
+      animation: turnCardPulse 2s infinite alternate ease-in-out;
+    }
+    @keyframes turnCardPulse {
+      0% { box-shadow: 0 10px 25px rgba(0,0,0,0.8), 0 0 15px rgba(56, 189, 248, 0.3); }
+      100% { box-shadow: 0 14px 35px rgba(0,0,0,0.9), 0 0 28px rgba(56, 189, 248, 0.7); }
     }
     .game-card.disabled {
-      opacity: 0.4;
+      opacity: 0.35;
       pointer-events: none;
-      filter: grayscale(0.8);
+      filter: grayscale(0.85);
+      transform: none !important;
     }
     .game-card.card-criminal { border-color: #ef4444; }
     .game-card.card-detective { border-color: #38bdf8; }
@@ -227,27 +243,47 @@
 
     .card-art-box {
       width: 100%;
-      height: 85px;
+      height: 100%;
+      position: absolute;
+      inset: 0;
       overflow: hidden;
       background: #1e293b;
-      position: relative;
     }
     .card-art-box img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center top; /* Shows full face & upper body clearly */
+      display: block;
     }
+    /* Transparent Frosted Glass Bottom Overlay for Card Definition */
     .card-info-box {
-      padding: 6px;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 8px 6px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      flex: 1;
-      background: rgba(15, 23, 42, 0.95);
+      justify-content: flex-end;
+      background: linear-gradient(to top, rgba(3, 7, 18, 0.92) 0%, rgba(3, 7, 18, 0.65) 65%, transparent 100%);
+      backdrop-filter: blur(4px);
+      z-index: 2;
     }
     .card-title-text {
-      font-size: 0.75rem;
+      font-size: 0.82rem;
       font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.15;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    }
+    .card-desc-text {
+      font-size: 0.64rem;
+      color: #e2e8f0;
+      line-height: 1.25;
+      margin-top: 3px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.95);
+    }
       color: #f8fafc;
       line-height: 1.1;
     }
@@ -316,25 +352,22 @@
         font-size: 0.65rem;
       }
       .game-card {
-        width: 85px;
-        height: 130px;
-      }
-      .card-art-box {
-        height: 65px;
+        width: 100px;
+        height: 150px;
       }
       .card-title-text {
-        font-size: 0.68rem;
+        font-size: 0.72rem;
       }
       .card-desc-text {
-        font-size: 0.55rem;
+        font-size: 0.58rem;
       }
       .center-discard-card {
-        width: 80px;
-        height: 115px;
+        width: 95px;
+        height: 135px;
       }
       .center-announcement {
         font-size: 0.75rem;
-        max-width: 200px;
+        max-width: 220px;
       }
     }
   </style>
@@ -571,6 +604,6 @@
 
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="game.js?v=1.0"></script>
+  <script src="game.js?v=1.1"></script>
 </body>
 </html>

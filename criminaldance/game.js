@@ -407,13 +407,15 @@ function renderTableLayout() {
   const currP = gameState.players[gameState.currentTurn];
   if (currP) {
     if (gameState.currentTurn === gameState.myPlayerIdx) {
-      turnBadge.textContent = "Your Turn to Play";
+      turnBadge.innerHTML = "⚡ <strong>YOUR TURN TO PLAY</strong>";
       turnBadge.style.color = '#10b981';
-      turnBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+      turnBadge.style.background = 'rgba(16, 185, 129, 0.25)';
+      turnBadge.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.4)';
     } else {
-      turnBadge.textContent = `${currP.name}'s Turn`;
+      turnBadge.innerHTML = `⏳ <strong>${currP.name}'s Round</strong>`;
       turnBadge.style.color = '#38bdf8';
-      turnBadge.style.background = 'rgba(56, 189, 248, 0.15)';
+      turnBadge.style.background = 'rgba(56, 189, 248, 0.2)';
+      turnBadge.style.boxShadow = 'none';
     }
   }
 }
@@ -421,11 +423,19 @@ function renderTableLayout() {
 // Render My Bottom Hand Dock
 function renderMyHand() {
   const container = document.getElementById('myHandCardsRow');
+  const dock = document.querySelector('.my-hand-dock');
   container.innerHTML = '';
   const me = gameState.players[gameState.myPlayerIdx];
   if (!me) return;
 
   const isMyTurn = (gameState.currentTurn === gameState.myPlayerIdx && !gameState.gameOver);
+
+  // Apply zoom class to bottom dock when it's our turn
+  if (isMyTurn) {
+    dock.classList.add('my-turn-zoom');
+  } else {
+    dock.classList.remove('my-turn-zoom');
+  }
 
   me.hand.forEach((card, cardIndex) => {
     const cardEl = document.createElement('div');
