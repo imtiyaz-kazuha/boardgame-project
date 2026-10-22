@@ -647,15 +647,18 @@ function evaluateBotReactions(stage) {
       });
       renderTableLayout();
 
-      // CRITICAL FIX: If human is the actor OR human cannot react, all opponents are bots and they just allowed the move!
-      // Resolve the action immediately instead of hanging in dead air!
-      if (!canHumanReact) {
+      // Immediate continuation if all living players (including human) have allowed:
+      const me = coupState.players[coupState.myPlayerIdx];
+      const humanHasAllowed = isPlayerDead(me) || action.actorIdx === me.id || me.currentReaction?.text === '✓ ALLOW';
+
+      if (!canHumanReact || humanHasAllowed) {
         clearReactionTimer();
+        document.getElementById('reactionBanner').style.display = 'none';
         setTimeout(() => {
           if (coupState.pendingAction) {
             applyActionEffect(action);
           }
-        }, 800);
+        }, 500);
       }
 
     } else if (stage === 'block_challenge') {
@@ -688,13 +691,17 @@ function evaluateBotReactions(stage) {
       });
       renderTableLayout();
 
-      // If human cannot challenge the block (e.g. human was the blocker), block holds automatically!
-      if (!canHumanReact) {
+      // Immediate continuation if all living players have allowed the block
+      const me = coupState.players[coupState.myPlayerIdx];
+      const humanHasAllowedBlock = isPlayerDead(me) || action.blockedBy === me.id || me.currentReaction?.text === '✓ ALLOW';
+
+      if (!canHumanReact || humanHasAllowedBlock) {
         clearReactionTimer();
+        document.getElementById('reactionBanner').style.display = 'none';
         setTimeout(() => {
           showToast("Block Unchallenged", `Block held! Action was prevented.`, "🛡️");
           finishActionTurn();
-        }, 800);
+        }, 500);
       }
     }
   }, 2400); // 2.4s thinking delay gives human plenty of time to read and challenge!
@@ -1195,12 +1202,46 @@ function setupUIEventListeners() {
     document.getElementById('reactionBanner').style.display = 'none';
     const action = coupState.pendingAction;
     if (!action) return;
+
+    // Mark Human Player as ALLOW
+    const me = coupState.players[coupState.myPlayerIdx];
+    me.currentReaction = { text: '✓ ALLOW', bg: '#065f46', border: '#10b981' };
+    renderTableLayout();
+
     if (coupState.reactionState.stage === 'action_challenge_or_block') {
       if (action.blockedBy === null) {
-        applyActionEffect(action);
+        // Human allowed the action! Check if all living bots also allowed it
+        const livingBots = coupState.players.filter(p => p.isBot && !isPlayerDead(p) && p.id !== action.actorIdx);
+        const allBotsAllowed = livingBots.every(b => b.currentReaction?.text === '✓ ALLOW');
+
+        if (allBotsAllowed || livingBots.length === 0) {
+          // Everyone living has allowed! Continue immediately without waiting out any timer!
+          showToast("All Players Allowed", "No challenges declared. Action executing immediately!", "✓");
+          applyActionEffect(action);
+        } else {
+          // If bots haven't finished thinking yet, let bot evaluation complete or auto-resolve
+          setTimeout(() => {
+            if (coupState.pendingAction && coupState.pendingAction.blockedBy === null) {
+              applyActionEffect(action);
+            }
+          }, 600);
+        }
       }
     } else {
-      finishActionTurn();
+      // In block challenge: Human passes on challenging the block
+      const livingBots = coupState.players.filter(p => p.isBot && !isPlayerDead(p) && p.id !== action.blockedBy);
+      const allBotsAllowed = livingBots.every(b => b.currentReaction?.text === '✓ ALLOW');
+
+      if (allBotsAllowed || livingBots.length === 0) {
+        showToast("Block Allowed", "Block held uncontested! Action prevented.", "🛡️");
+        finishActionTurn();
+      } else {
+        setTimeout(() => {
+          if (coupState.pendingAction) {
+            finishActionTurn();
+          }
+        }, 600);
+      }
     }
   });
 
