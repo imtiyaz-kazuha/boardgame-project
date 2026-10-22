@@ -109,19 +109,64 @@ function loopVfx() {
 requestAnimationFrame(loopVfx);
 
 function spawnCardVFX(x, y, color = '#38bdf8') {
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 40; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 2 + Math.random() * 5;
+    const speed = 3 + Math.random() * 8;
     activeParticles.push({
       x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      size: 3 + Math.random() * 3,
+      size: 3 + Math.random() * 4,
       color,
-      life: 0.6 + Math.random() * 0.4,
-      maxLife: 1.0
+      life: 0.8 + Math.random() * 0.5,
+      maxLife: 1.3
     });
   }
+}
+
+// Smooth Flying Card Animation with Trail Sparks
+function animateCardToCenter(card, startRect, color = '#38bdf8', callback) {
+  const centerHub = document.getElementById('centerDiscard');
+  const hubRect = centerHub.getBoundingClientRect();
+  const targetX = hubRect.left || (window.innerWidth / 2 - 62);
+  const targetY = hubRect.top || (window.innerHeight * 0.42 - 87);
+
+  const clone = document.createElement('div');
+  clone.className = `flying-card-clone ${card.cardClass || ''}`;
+  clone.innerHTML = `
+    <img src="${card.img}" alt="${card.name}">
+    <div class="card-info-box">
+      <div class="card-title-text">${card.name}</div>
+    </div>
+  `;
+  clone.style.left = `${startRect.left}px`;
+  clone.style.top = `${startRect.top}px`;
+  clone.style.width = `${startRect.width}px`;
+  clone.style.height = `${startRect.height}px`;
+  clone.style.transform = `rotate(${(Math.random() - 0.5) * 20}deg) scale(1.05)`;
+  document.body.appendChild(clone);
+
+  // Spark trail generator during flight
+  let trailInterval = setInterval(() => {
+    const curRect = clone.getBoundingClientRect();
+    spawnCardVFX(curRect.left + curRect.width / 2, curRect.top + curRect.height / 2, color);
+  }, 45);
+
+  requestAnimationFrame(() => {
+    clone.style.left = `${targetX}px`;
+    clone.style.top = `${targetY}px`;
+    clone.style.width = `125px`;
+    clone.style.height = `175px`;
+    clone.style.transform = `rotate(0deg) scale(1)`;
+  });
+
+  setTimeout(() => {
+    clearInterval(trailInterval);
+    spawnCardVFX(targetX + 62, targetY + 87, color);
+    spawnCardVFX(targetX + 62, targetY + 87, '#f59e0b');
+    clone.remove();
+    if (callback) callback();
+  }, 560);
 }
 
 function spawnVictoryConfetti() {
@@ -484,7 +529,7 @@ function renderMyHand() {
 
     cardEl.addEventListener('click', () => {
       if (!canPlay) return;
-      playHumanCard(cardIndex);
+      playHumanCard(cardIndex, cardEl);
     });
 
     container.appendChild(cardEl);
@@ -516,23 +561,31 @@ function setAnnouncement(text) {
 // Human Play Card
 let pendingHumanCardPlayed = null;
 
-function playHumanCard(cardIndex) {
+function playHumanCard(cardIndex, cardElement) {
   const me = gameState.players[gameState.myPlayerIdx];
   const card = me.hand.splice(cardIndex, 1)[0];
   playSound('card_play');
 
-  gameState.discardPile.push({ card, player: me });
-  gameState.isFirstTurn = false;
-  pendingHumanCardPlayed = { card, cardIndex };
+  const startRect = cardElement ? cardElement.getBoundingClientRect() : {
+    left: window.innerWidth / 2 - 65,
+    top: window.innerHeight - 150,
+    width: 130,
+    height: 195
+  };
 
-  updateCenterHub();
   renderMyHand();
-  renderTableLayout();
 
-  const seatCenter = getSeatCenter(me.id);
-  spawnCardVFX(seatCenter.x, seatCenter.y, '#38bdf8');
+  // Smooth flying animation with trail sparks to center discard!
+  animateCardToCenter(card, startRect, '#38bdf8', () => {
+    gameState.discardPile.push({ card, player: me });
+    gameState.isFirstTurn = false;
+    pendingHumanCardPlayed = { card, cardIndex };
 
-  executeCardEffect(me, card);
+    updateCenterHub();
+    renderTableLayout();
+
+    executeCardEffect(me, card);
+  });
 }
 
 // Cancel action and return the played card back to hand
@@ -1031,21 +1084,31 @@ function handleBotTurn() {
   const firstIdx = bot.hand.findIndex(c => c.id === 'first_discovery');
   if (firstIdx !== -1) {
     const card = bot.hand.splice(firstIdx, 1)[0];
-    gameState.discardPile.push({ card, player: bot });
-    gameState.isFirstTurn = false;
-    updateCenterHub();
-    renderTableLayout();
-    executeCardEffect(bot, card);
+    const seatCenter = getSeatCenter(bot.id);
+    const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
+    playSound('card_play');
+    animateCardToCenter(card, botRect, '#38bdf8', () => {
+      gameState.discardPile.push({ card, player: bot });
+      gameState.isFirstTurn = false;
+      updateCenterHub();
+      renderTableLayout();
+      executeCardEffect(bot, card);
+    });
     return;
   }
 
   // 2. CRIMINAL: If it's the last card, play it to win!
   if (bot.hand.length === 1 && bot.hand[0].id === 'criminal') {
     const card = bot.hand.pop();
-    gameState.discardPile.push({ card, player: bot });
-    updateCenterHub();
-    renderTableLayout();
-    executeCardEffect(bot, card);
+    const seatCenter = getSeatCenter(bot.id);
+    const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
+    playSound('card_play');
+    animateCardToCenter(card, botRect, '#ef4444', () => {
+      gameState.discardPile.push({ card, player: bot });
+      updateCenterHub();
+      renderTableLayout();
+      executeCardEffect(bot, card);
+    });
     return;
   }
 
@@ -1055,10 +1118,15 @@ function handleBotTurn() {
     const validTargets = gameState.players.filter((p, i) => i !== bot.id && p.hand.length <= 3 && p.hand.length > 0);
     if (validTargets.length > 0) {
       const card = bot.hand.splice(detIdx, 1)[0];
-      gameState.discardPile.push({ card, player: bot });
-      updateCenterHub();
-      renderTableLayout();
-      executeCardEffect(bot, card);
+      const seatCenter = getSeatCenter(bot.id);
+      const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
+      playSound('card_play');
+      animateCardToCenter(card, botRect, '#38bdf8', () => {
+        gameState.discardPile.push({ card, player: bot });
+        updateCenterHub();
+        renderTableLayout();
+        executeCardEffect(bot, card);
+      });
       return;
     }
   }
@@ -1067,10 +1135,15 @@ function handleBotTurn() {
   const dogIdx = bot.hand.findIndex(c => c.id === 'police_dog');
   if (dogIdx !== -1) {
     const card = bot.hand.splice(dogIdx, 1)[0];
-    gameState.discardPile.push({ card, player: bot });
-    updateCenterHub();
-    renderTableLayout();
-    executeCardEffect(bot, card);
+    const seatCenter = getSeatCenter(bot.id);
+    const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
+    playSound('card_play');
+    animateCardToCenter(card, botRect, '#f59e0b', () => {
+      gameState.discardPile.push({ card, player: bot });
+      updateCenterHub();
+      renderTableLayout();
+      executeCardEffect(bot, card);
+    });
     return;
   }
 
@@ -1078,10 +1151,15 @@ function handleBotTurn() {
   const policeIdx = bot.hand.findIndex(c => c.id === 'police');
   if (policeIdx !== -1) {
     const card = bot.hand.splice(policeIdx, 1)[0];
-    gameState.discardPile.push({ card, player: bot });
-    updateCenterHub();
-    renderTableLayout();
-    executeCardEffect(bot, card);
+    const seatCenter = getSeatCenter(bot.id);
+    const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
+    playSound('card_play');
+    animateCardToCenter(card, botRect, '#38bdf8', () => {
+      gameState.discardPile.push({ card, player: bot });
+      updateCenterHub();
+      renderTableLayout();
+      executeCardEffect(bot, card);
+    });
     return;
   }
 
@@ -1093,10 +1171,22 @@ function handleBotTurn() {
 
   const chosenCardIdx = playableIndices.length > 0 ? playableIndices[Math.floor(Math.random() * playableIndices.length)] : 0;
   const card = bot.hand.splice(chosenCardIdx, 1)[0];
-  gameState.discardPile.push({ card, player: bot });
-  updateCenterHub();
-  renderTableLayout();
-  executeCardEffect(bot, card);
+
+  const seatCenter = getSeatCenter(bot.id);
+  const botRect = {
+    left: seatCenter.x - 45,
+    top: seatCenter.y - 30,
+    width: 90,
+    height: 60
+  };
+
+  playSound('card_play');
+  animateCardToCenter(card, botRect, '#f43f5e', () => {
+    gameState.discardPile.push({ card, player: bot });
+    updateCenterHub();
+    renderTableLayout();
+    executeCardEffect(bot, card);
+  });
 }
 
 function botExecuteDetective(bot) {

@@ -59,6 +59,29 @@
       margin: auto;
     }
 
+    /* Flying Card Animation Component */
+    .flying-card-clone {
+      position: fixed;
+      width: 125px;
+      height: 175px;
+      border-radius: 12px;
+      border: 2px solid #38bdf8;
+      background: #0f172a;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.9), 0 0 35px rgba(56, 189, 248, 0.7);
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 9999;
+      transform-origin: center center;
+      transition: all 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .flying-card-clone img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+    }
+
     /* Center Hub / Discard Pile */
     .table-center-hub {
       position: absolute;
@@ -624,6 +647,6 @@
 
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="game.js?v=1.4"></script>
+  <script src="game.js?v=1.5"></script>
 </body>
 </html>
