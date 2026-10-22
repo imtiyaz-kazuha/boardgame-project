@@ -140,13 +140,13 @@ function spawnVictoryConfetti() {
   }
 }
 
-// Card Definitions with English Names & Fictional Cartoon Art
+// Card Definitions with English Names & Unique Fictional Cartoon Art
 const CARDS = {
   FIRST_DISCOVERY: {
     id: 'first_discovery',
     name: 'First Discovery',
     type: 'event',
-    img: 'assets/card_detective.jpg',
+    img: 'assets/card_first_discovery.jpg',
     cardClass: 'card-detective',
     desc: 'The crime scene! The holder of this card plays first to start the round.',
     canPlay: (player, state) => state.isFirstTurn
@@ -168,17 +168,27 @@ const CARDS = {
     cardClass: 'card-detective',
     desc: 'Accuse a suspect with 3 or fewer cards. If they hold the Criminal (and no Alibi), you win!',
     canPlay: (player, state) => {
-      // Detective can be played once any rival has <= 3 cards
       return state.players.some((p, idx) => idx !== state.currentTurn && p.hand.length <= 3 && p.hand.length > 0);
+    }
+  },
+  POLICE: {
+    id: 'police',
+    name: 'Police Inspector',
+    type: 'investigation',
+    img: 'assets/card_police.jpg',
+    cardClass: 'card-detective',
+    desc: 'Point to any suspect and question them directly! If they hold the Criminal (and have no Alibi), they are arrested and you win!',
+    canPlay: (player, state) => {
+      return state.players.some((p, idx) => idx !== state.currentTurn && p.hand.length > 0);
     }
   },
   POLICE_DOG: {
     id: 'police_dog',
-    name: 'Police Dog',
+    name: 'Police Dog (K-9)',
     type: 'investigation',
     img: 'assets/card_dog.jpg',
     cardClass: 'card-dog',
-    desc: 'Sniff 1 card from a chosen suspect. If it is the Criminal, they are caught immediately!',
+    desc: 'Choose a suspect, then choose which 1 card from their hand to sniff! If it is the Criminal, they are caught!',
     canPlay: (player, state) => {
       return state.players.some((p, idx) => idx !== state.currentTurn && p.hand.length > 0);
     }
@@ -196,16 +206,16 @@ const CARDS = {
     id: 'alibi',
     name: 'Alibi',
     type: 'defense',
-    img: 'assets/card_detective.jpg',
+    img: 'assets/card_alibi.jpg',
     cardClass: 'card-alibi',
-    desc: 'While in your hand, if accused by Detective, you can claim "Not Guilty" even if holding Criminal!',
+    desc: 'While in your hand, if questioned by Detective or Police, you can claim "Not Guilty" even if holding Criminal!',
     canPlay: () => true
   },
   WITNESS: {
     id: 'witness',
     name: 'Witness',
     type: 'intel',
-    img: 'assets/card_detective.jpg',
+    img: 'assets/card_witness.jpg',
     cardClass: 'card-info',
     desc: 'Look secretly at a chosen player\'s entire hand.',
     canPlay: (player, state) => {
@@ -216,7 +226,7 @@ const CARDS = {
     id: 'info_trade',
     name: 'Information Trade',
     type: 'swap',
-    img: 'assets/card_criminal.jpg',
+    img: 'assets/card_trade.jpg',
     cardClass: 'card-info',
     desc: 'Everyone passes 1 card from their hand to the player on their left.',
     canPlay: () => true
@@ -225,7 +235,7 @@ const CARDS = {
     id: 'rumor',
     name: 'Rumor / Gossip',
     type: 'swap',
-    img: 'assets/card_dog.jpg',
+    img: 'assets/card_rumor.jpg',
     cardClass: 'card-info',
     desc: 'Every player draws 1 random card from the player on their right.',
     canPlay: () => true
@@ -234,7 +244,7 @@ const CARDS = {
     id: 'trade_secrets',
     name: 'Trade Secrets',
     type: 'swap',
-    img: 'assets/card_accomplice.jpg',
+    img: 'assets/card_trade.jpg',
     cardClass: 'card-accomplice',
     desc: 'Choose a player. You and that player privately swap 1 card each.',
     canPlay: (player, state) => {
@@ -243,58 +253,73 @@ const CARDS = {
   },
   BOYCOTT: {
     id: 'boycott',
-    name: 'Boycott / Walkout',
+    name: 'Bystander / Civilian',
     type: 'blank',
-    img: 'assets/card_criminal.jpg',
+    img: 'assets/card_alibi.jpg',
     cardClass: 'card-info',
-    desc: 'No special effect. Discard safely to reduce your hand size.',
+    desc: 'An innocent bystander. No special effect. Discard safely to reduce your hand size.',
     canPlay: () => true
   }
 };
 
-// Deck Builder based on Player Count (Official balance: 4 cards per player)
+// Official Deck Composition (Exact rules from Hannin wa Odoru 3rd Edition)
+// Total Pool: 32 Cards (First Discovery x1, Criminal x1, Detective x4, Police x1, Dog x1, Accomplice x2, Alibi x5, Witness x3, Trade x5, Rumor x4, Info Trade x3, Bystander x2)
 function generateDeck(playerCount) {
   const cards = [];
 
-  // Core mandatory cards
+  // Mandatory starting cards for all player counts:
   cards.push(CARDS.FIRST_DISCOVERY);
   cards.push(CARDS.CRIMINAL);
   cards.push(CARDS.DETECTIVE);
+  cards.push(CARDS.POLICE);
   cards.push(CARDS.ALIBI);
-  cards.push(CARDS.INFO_TRADE);
+  cards.push(CARDS.ALIBI);
 
   if (playerCount >= 4) {
-    cards.push(CARDS.POLICE_DOG);
     cards.push(CARDS.ACCOMPLICE);
+    cards.push(CARDS.POLICE_DOG);
     cards.push(CARDS.WITNESS);
-    cards.push(CARDS.RUMOR);
-    cards.push(CARDS.TRADE_SECRETS);
-    cards.push(CARDS.BOYCOTT);
+    cards.push(CARDS.INFO_TRADE);
   }
 
   if (playerCount >= 5) {
     cards.push(CARDS.DETECTIVE);
     cards.push(CARDS.ALIBI);
-    cards.push(CARDS.INFO_TRADE);
-    cards.push(CARDS.BOYCOTT);
+    cards.push(CARDS.RUMOR);
+    cards.push(CARDS.TRADE_SECRETS);
   }
 
   if (playerCount >= 6) {
-    cards.push(CARDS.POLICE_DOG);
     cards.push(CARDS.ACCOMPLICE);
     cards.push(CARDS.WITNESS);
-    cards.push(CARDS.RUMOR);
+    cards.push(CARDS.TRADE_SECRETS);
+    cards.push(CARDS.BOYCOTT);
   }
 
-  // Fill up deck to exactly (playerCount * 4) cards with balanced extras
-  const extras = [CARDS.BOYCOTT, CARDS.INFO_TRADE, CARDS.TRADE_SECRETS, CARDS.ALIBI];
-  let extraIdx = 0;
-  while (cards.length < playerCount * 4) {
-    cards.push(extras[extraIdx % extras.length]);
-    extraIdx++;
+  // Pool of authentic remaining cards to fill up to exactly (playerCount * 4) cards
+  const remainingPool = [
+    CARDS.DETECTIVE,
+    CARDS.DETECTIVE,
+    CARDS.ALIBI,
+    CARDS.ALIBI,
+    CARDS.TRADE_SECRETS,
+    CARDS.TRADE_SECRETS,
+    CARDS.TRADE_SECRETS,
+    CARDS.RUMOR,
+    CARDS.RUMOR,
+    CARDS.RUMOR,
+    CARDS.INFO_TRADE,
+    CARDS.INFO_TRADE,
+    CARDS.WITNESS,
+    CARDS.BOYCOTT
+  ].sort(() => Math.random() - 0.5);
+
+  const needed = (playerCount * 4) - cards.length;
+  for (let i = 0; i < needed; i++) {
+    cards.push(remainingPool[i % remainingPool.length]);
   }
 
-  // Shuffle
+  // Shuffle thoroughly
   return cards.sort(() => Math.random() - 0.5);
 }
 
@@ -554,7 +579,17 @@ function executeCardEffect(actor, card) {
     return;
   }
 
-  // 3. POLICE DOG: Sniff 1 card from suspect
+  // 3. POLICE INSPECTOR: Accuse any suspect directly
+  if (card.id === 'police') {
+    if (!actor.isBot) {
+      openAccuseSuspectModal('police');
+    } else {
+      botExecutePolice(actor);
+    }
+    return;
+  }
+
+  // 4. POLICE DOG: Sniff 1 chosen card from a chosen suspect
   if (card.id === 'police_dog') {
     if (!actor.isBot) {
       openAccuseSuspectModal('police_dog');
@@ -627,6 +662,7 @@ function nextTurn() {
     nextIdx = (nextIdx + 1) % gameState.players.length;
   }
 
+  // Re-render my hand and seats whenever turn advances
   gameState.currentTurn = nextIdx;
   renderTableLayout();
   renderMyHand();
@@ -639,7 +675,7 @@ function nextTurn() {
   }
 }
 
-// Accuse Modal for Detective & Police Dog
+// Accuse Modal for Detective, Police Inspector & Police Dog
 function openAccuseSuspectModal(actionType) {
   const modal = document.getElementById('targetPickerModal');
   const title = document.getElementById('targetModalTitle');
@@ -648,11 +684,14 @@ function openAccuseSuspectModal(actionType) {
   grid.innerHTML = '';
 
   if (actionType === 'detective') {
-    title.textContent = "🕵️ Point Your Accusation!";
-    desc.textContent = "Choose a suspect holding 3 or fewer cards to accuse of being the Criminal:";
+    title.textContent = "🕵️ Detective's Deduction";
+    desc.textContent = "Choose a suspect holding 3 or fewer cards to interrogate:";
+  } else if (actionType === 'police') {
+    title.textContent = "👮 Police Interrogation";
+    desc.textContent = "Point to any suspect at the table to interrogate directly:";
   } else {
-    title.textContent = "🐕 Release the Police Dog!";
-    desc.textContent = "Choose a suspect to sniff 1 card from their hand:";
+    title.textContent = "🐕 K-9 Police Dog";
+    desc.textContent = "Choose a suspect to sniff their cards:";
   }
 
   gameState.players.forEach(p => {
@@ -669,8 +708,14 @@ function openAccuseSuspectModal(actionType) {
 
     btn.addEventListener('click', () => {
       modal.style.display = 'none';
-      pendingHumanCardPlayed = null; // Confirmed action!
-      resolveAccusation(gameState.players[gameState.myPlayerIdx], p, actionType);
+
+      if (actionType === 'police_dog') {
+        // Dog card selection: let human choose WHICH card of that suspect's hand to sniff!
+        openDogCardPicker(p);
+      } else {
+        pendingHumanCardPlayed = null; // Confirmed action!
+        resolveAccusation(gameState.players[gameState.myPlayerIdx], p, actionType);
+      }
     });
 
     grid.appendChild(btn);
@@ -679,43 +724,70 @@ function openAccuseSuspectModal(actionType) {
   modal.style.display = 'flex';
 }
 
-document.getElementById('cancelTargetBtn').addEventListener('click', () => {
-  document.getElementById('targetPickerModal').style.display = 'none';
-  cancelHumanCardAction();
-});
+// Dog Card Picker: Let the player choose which of the suspect's facedown cards to sniff!
+function openDogCardPicker(suspect) {
+  const modal = document.getElementById('targetPickerModal');
+  const title = document.getElementById('targetModalTitle');
+  const desc = document.getElementById('targetModalDesc');
+  const grid = document.getElementById('suspectsPickerGrid');
+  grid.innerHTML = '';
+
+  title.textContent = `🐕 Sniff ${suspect.name}'s Cards`;
+  desc.textContent = `Pick which of ${suspect.name}'s ${suspect.hand.length} facedown cards the K-9 should sniff:`;
+
+  suspect.hand.forEach((card, cardIdx) => {
+    const btn = document.createElement('button');
+    btn.className = 'picker-btn';
+    btn.innerHTML = `
+      <div style="font-size:2rem; margin-bottom:4px;">🎴</div>
+      <div style="font-size:0.9rem; font-weight:800;">Card #${cardIdx + 1}</div>
+    `;
+
+    btn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      pendingHumanCardPlayed = null;
+      resolveDogSniff(gameState.players[gameState.myPlayerIdx], suspect, cardIdx);
+    });
+
+    grid.appendChild(btn);
+  });
+
+  modal.style.display = 'flex';
+}
+
+function resolveDogSniff(accuser, suspect, cardIdx) {
+  playSound('accuse');
+  const sniffedCard = suspect.hand[cardIdx] || suspect.hand[0];
+
+  if (sniffedCard && sniffedCard.id === 'criminal') {
+    showToast("DOG CAUGHT THE TRAIL!", `🐕 Card #${cardIdx + 1} was the Criminal! ${suspect.name} is caught!`, "🚨");
+    endGame('detective', accuser, `The K-9 tracking dog sniffed out ${suspect.name}'s Criminal card on Card #${cardIdx + 1}!`);
+  } else {
+    showToast("Scent Clear!", `🐕 Card #${cardIdx + 1} was "${sniffedCard ? sniffedCard.name : 'Clean'}". Not the Criminal.`, "🐾");
+    setAnnouncement(`Police dog sniffed Card #${cardIdx + 1} from <strong>${suspect.name}</strong> — clear!`);
+    nextTurn();
+  }
+}
 
 // Resolve Accusations
 function resolveAccusation(accuser, suspect, actionType) {
   playSound('accuse');
 
-  if (actionType === 'detective') {
-    const hasCriminal = suspect.hand.some(c => c.id === 'criminal');
-    const hasAlibi = suspect.hand.some(c => c.id === 'alibi');
+  const hasCriminal = suspect.hand.some(c => c.id === 'criminal');
+  const hasAlibi = suspect.hand.some(c => c.id === 'alibi');
 
-    if (hasCriminal && !hasAlibi) {
-      // BUSTED! Detective Wins!
-      showToast("BUSTED!", `🚨 ${suspect.name} was caught holding the Criminal!`, "👮");
-      endGame('detective', accuser, `${accuser.name} accurately deduced that ${suspect.name} harbored the Criminal!`);
-    } else if (hasCriminal && hasAlibi) {
-      showToast("ALIBI SHIELD!", `🛡️ ${suspect.name} invoked an Alibi and declared: "I am innocent!"`, "🪓");
-      setAnnouncement(`<strong>${suspect.name}</strong> presented a solid Alibi!`);
-      nextTurn();
-    } else {
-      showToast("INNOCENT!", `❌ ${suspect.name} is NOT the Criminal!`, "🤷");
-      setAnnouncement(`<strong>${suspect.name}</strong> proved completely innocent.`);
-      nextTurn();
-    }
-  } else if (actionType === 'police_dog') {
-    // Dog sniffs 1 random card
-    const randomCard = suspect.hand[Math.floor(Math.random() * suspect.hand.length)];
-    if (randomCard.id === 'criminal') {
-      showToast("DOG CAUGHT THE TRAIL!", `🐕 The K-9 sniffed out the Criminal in ${suspect.name}'s hand!`, "🚨");
-      endGame('detective', accuser, `The K-9 tracking dog sniffed out ${suspect.name}'s Criminal card!`);
-    } else {
-      showToast("Clear!", `🐕 Police dog sniffed a clean card from ${suspect.name}.`, "🐾");
-      setAnnouncement(`Police dog sniffed a harmless card from <strong>${suspect.name}</strong>.`);
-      nextTurn();
-    }
+  if (hasCriminal && !hasAlibi) {
+    // BUSTED! Detective / Police Wins!
+    showToast("BUSTED!", `🚨 ${suspect.name} was caught holding the Criminal!`, "👮");
+    endGame('detective', accuser, `${accuser.name} accurately deduced that ${suspect.name} harbored the Criminal!`);
+  } else if (hasCriminal && hasAlibi) {
+    showToast("ALIBI SHIELD!", `🛡️ ${suspect.name} invoked an Alibi and declared: "I am innocent!"`, "🪓");
+    setAnnouncement(`<strong>${suspect.name}</strong> presented an airtight Alibi!`);
+    nextTurn();
+  } else {
+    showToast("INNOCENT!", `❌ ${suspect.name} is NOT the Criminal!`, "🤷");
+    setAnnouncement(`<strong>${suspect.name}</strong> proved completely innocent.`);
+    nextTurn();
   }
 }
 
@@ -827,7 +899,7 @@ function completeTradeLeft(humanChosenIdx) {
   // Distribute to left neighbor ((i + 1) % total)
   const total = gameState.players.length;
   gameState.players.forEach((p, i) => {
-    // Left neighbor is (i + 1)
+    // Player i receives the card passed by player (i - 1 + total) % total
     const cardPassedFromRight = passingCards[(i - 1 + total) % total];
     if (cardPassedFromRight) {
       p.hand.push(cardPassedFromRight);
@@ -845,23 +917,23 @@ function executeRumorExchange() {
   showToast("🤫 Rumor Spreads!", "Everyone secretly takes 1 card from their right neighbor!", "👂");
   playSound('pass_card');
 
-  const stolen = [];
   const total = gameState.players.length;
+  const stolen = new Array(total).fill(null);
 
-  gameState.players.forEach(p => {
-    if (p.hand.length === 0) {
-      stolen.push(null);
-    } else {
-      const randIdx = Math.floor(Math.random() * p.hand.length);
-      stolen.push(p.hand.splice(randIdx, 1)[0]);
+  // Take 1 card from player (i + 1) % total
+  gameState.players.forEach((p, i) => {
+    const rightNeighborIdx = (i + 1) % total;
+    const rightNeighbor = gameState.players[rightNeighborIdx];
+    if (rightNeighbor && rightNeighbor.hand.length > 0) {
+      const randIdx = Math.floor(Math.random() * rightNeighbor.hand.length);
+      stolen[i] = rightNeighbor.hand.splice(randIdx, 1)[0];
     }
   });
 
-  // Right neighbor was (i + 1), so player i gets card stolen from (i + 1)
+  // Give each player the card they pulled from their right neighbor
   gameState.players.forEach((p, i) => {
-    const card = stolen[(i + 1) % total];
-    if (card) {
-      p.hand.push(card);
+    if (stolen[i]) {
+      p.hand.push(stolen[i]);
     }
   });
 
@@ -964,6 +1036,17 @@ function handleBotTurn() {
     return;
   }
 
+  // 5. Police Inspector
+  const policeIdx = bot.hand.findIndex(c => c.id === 'police');
+  if (policeIdx !== -1) {
+    const card = bot.hand.splice(policeIdx, 1)[0];
+    gameState.discardPile.push({ card, player: bot });
+    updateCenterHub();
+    renderTableLayout();
+    executeCardEffect(bot, card);
+    return;
+  }
+
   // 5. Play other cards (avoid playing Criminal early!)
   const playableIndices = [];
   bot.hand.forEach((c, idx) => {
@@ -991,6 +1074,18 @@ function botExecuteDetective(bot) {
   setTimeout(() => resolveAccusation(bot, target, 'detective'), 800);
 }
 
+function botExecutePolice(bot) {
+  const suspects = gameState.players.filter((p, i) => i !== bot.id && p.hand.length > 0);
+  if (suspects.length === 0) {
+    nextTurn();
+    return;
+  }
+  suspects.sort((a, b) => a.hand.length - b.hand.length);
+  const target = suspects[0];
+  showToast("Police Interrogation!", `👮 ${bot.name} questions ${target.name} directly!`, "🚨");
+  setTimeout(() => resolveAccusation(bot, target, 'police'), 800);
+}
+
 function botExecuteDog(bot) {
   const suspects = gameState.players.filter((p, i) => i !== bot.id && p.hand.length > 0);
   if (suspects.length === 0) {
@@ -999,8 +1094,9 @@ function botExecuteDog(bot) {
   }
   suspects.sort((a, b) => a.hand.length - b.hand.length);
   const target = suspects[0];
-  showToast("Police Dog!", `${bot.name} sends the K-9 to sniff ${target.name}!`, "🐕");
-  setTimeout(() => resolveAccusation(bot, target, 'police_dog'), 800);
+  const cardIdx = Math.floor(Math.random() * target.hand.length);
+  showToast("Police Dog!", `${bot.name} sends the K-9 to sniff Card #${cardIdx + 1} of ${target.name}!`, "🐕");
+  setTimeout(() => resolveDogSniff(bot, target, cardIdx), 800);
 }
 
 function botExecuteWitness(bot) {
