@@ -256,10 +256,10 @@ function renderTableLayout() {
         <div class="seat-name" style="color:#f8fafc;">
           ${p.name} ${p.isBot ? '<span style="font-size:0.68rem; color:#94a3b8;">🤖</span>' : ''}
         </div>
-        <div class="seat-coins">🪙 ${p.coins} Coins</div>
-      </div>
-      <div class="seat-cards-row">
-        ${cardsHtml}
+        <div class="seat-info-row">
+          <div class="seat-coins">🪙 ${p.coins}</div>
+          <div class="seat-cards-inline">${cardsHtml}</div>
+        </div>
       </div>
     `;
 
