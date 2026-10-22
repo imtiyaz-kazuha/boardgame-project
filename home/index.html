@@ -269,22 +269,28 @@
       <article class="glass-panel game-card">
         <div>
           <div class="game-art-banner" style="background: linear-gradient(135deg, #1e1b4b, #312e81);">
-            <div class="game-badge-status">● Live</div>
+            <div class="game-badge-status">● Live P2P + Review</div>
             <div style="font-size: 4rem;">⚪⚫</div>
           </div>
           <div class="game-meta">
             <span class="meta-tag">👥 2 Players</span>
             <span class="meta-tag">🧠 Pure Strategy</span>
-            <span class="meta-tag">🎋 Ancient Classic</span>
+            <span class="meta-tag">🎋 Japanese Rules</span>
+            <span class="meta-tag">⏱️ Voice Byo-Yomi</span>
           </div>
           <h2 class="game-title">Go (Baduk / Weiqi)</h2>
           <p class="game-desc">
             The legendary ancient game of territory and strategy! Place black and white stones on the grid, surround territory, capture opponent stones, and master the board.
           </p>
         </div>
-        <a href="https://imtiyaz-kazuha.github.io/go-imtiyaz/" target="_blank" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #6366f1, #4338ca);">
-          Play Go (Baduk) ↗
-        </a>
+        <div style="display: flex; gap: 8px;">
+          <a href="../go/" class="btn btn-primary" style="flex: 2; background: linear-gradient(135deg, #6366f1, #4338ca);">
+            Play Game →
+          </a>
+          <button class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;" onclick="openGoRulesModal()">
+            📖 Rules
+          </button>
+        </div>
       </article>
 
       <!-- Game 4: Ludo Royale -->
@@ -717,6 +723,41 @@
     </div>
   </div>
 
+  <!-- Go (Baduk / Weiqi) Rules Modal -->
+  <div id="goRulesModal" class="glass-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div class="glass-panel" style="width:100%; max-width:640px; max-height:85vh; overflow-y:auto; padding:28px; border-radius:var(--radius-lg); position:relative; border: 2px solid rgba(99, 102, 241, 0.4);">
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        ⚪⚫ How to Play: Go (Baduk / 碁)
+      </h2>
+      
+      <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎯 Objective</h4>
+          <p>Go is an ancient game of territory. Two players (Black and White) take turns placing stones on the grid intersections. The player who surrounds and controls the greatest territory on the board wins.</p>
+        </section>
+
+        <section>
+          <h4 style="color:#818cf8; margin-bottom:4px;">⚔️ Liberties & Capturing Stones</h4>
+          <p>Every stone or connected chain of stones has adjacent unoccupied intersections called <strong>Liberties</strong>. If all liberties of an opponent's group are occupied by your stones, the group is <strong>captured and removed</strong> from the board as prisoners!</p>
+        </section>
+
+        <section>
+          <h4 style="color:#818cf8; margin-bottom:4px;">🚫 Basic Ko Rule & No Suicide</h4>
+          <p>You cannot make a move that leaves your stone with zero liberties unless that move immediately captures opponent stones (suicide is illegal). The <strong>Ko rule</strong> prevents endless loops: you cannot immediately recapture a single stone if it repeats the exact previous board state.</p>
+        </section>
+
+        <section>
+          <h4 style="color:#818cf8; margin-bottom:4px;">🎌 Japanese Rules & Komi</h4>
+          <p>Black moves first. To compensate White for moving second, White receives <strong>6.5 Komi points</strong>. When both players pass consecutively, the game enters the removal phase to mark dead stones, and territory is tallied automatically!</p>
+        </section>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #6366f1, #4338ca); font-weight:800;" onclick="closeGoRulesModal()">
+        Got it! Close Rules
+      </button>
+    </div>
+  </div>
+
   <script>
     function openRulesModal() {
       document.getElementById('rulesModal').style.display = 'flex';
@@ -753,6 +794,12 @@
     }
     function closeSplendorRulesModal() {
       document.getElementById('splendorRulesModal').style.display = 'none';
+    }
+    function openGoRulesModal() {
+      document.getElementById('goRulesModal').style.display = 'flex';
+    }
+    function closeGoRulesModal() {
+      document.getElementById('goRulesModal').style.display = 'none';
     }
   </script>
 

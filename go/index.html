@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Online - Modern Japanese Baduk</title>
+  <!-- Google Fonts: Inter & Outfit & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- PeerJS for WebRTC P2P sync -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <!-- Ambient background lighting spheres -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- VIEW 1: Modern Home Page / Lobby -->
+  <div id="homeView" class="view-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; max-width:1100px; margin:0 auto 20px; padding:10px 16px;">
+      <a href="../home/" class="nav-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+        ← Hub Portal
+      </a>
+      <span style="font-size:0.85rem; color:var(--text-muted);">Imtiboard Platform</span>
+    </div>
+
+    <header class="hero-header">
+      <div class="badge-pill">
+        <span class="pulsing-dot"></span> Peer-to-Peer • Japanese Nihon Ki-in Rules
+      </div>
+      <h1 class="hero-title">碁 Baduk Online</h1>
+      <p class="hero-subtitle">Fast, serverless multiplayer Go with voice byo-yomi, interactive undos, and game replays.</p>
+    </header>
+
+    <div class="lobby-grid">
+      <!-- Create Room Card -->
+      <div class="glass-card main-card">
+        <div class="card-header">
+          <div class="card-icon">⚡</div>
+          <div>
+            <h2>Create a Match</h2>
+            <p>Customize time controls, komi, and board size.</p>
+          </div>
+        </div>
+
+        <form id="createRoomForm" class="form-flow">
+          <div class="form-group">
+            <label for="createPlayerName">Your Username</label>
+            <input type="text" id="createPlayerName" placeholder="Enter your name..." required autocomplete="off" />
+          </div>
+
+          <div class="form-group">
+            <label for="createRoomName">Room Name</label>
+            <div class="input-with-button">
+              <input type="text" id="createRoomName" placeholder="e.g. dragon-cup" required autocomplete="off" />
+              <button type="button" id="randomRoomBtn" class="btn-ghost" title="Generate Random Room Name">🎲 Random</button>
+            </div>
+            <span class="field-hint">Your friend enters this room name to join you.</span>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="boardSizeSetting">Board Size</label>
+              <select id="boardSizeSetting">
+                <option value="19" selected>19x19 Standard</option>
+                <option value="13">13x13 Intermediate</option>
+                <option value="9">9x9 Quick</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="komiSetting">Komi (White Advantage)</label>
+              <select id="komiSetting">
+                <option value="6.5" selected>6.5 Points (Japanese)</option>
+                <option value="7.5">7.5 Points</option>
+                <option value="0.5">0.5 Points (Handicap)</option>
+                <option value="0">No Komi</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="mainTimeSetting">Main Time</label>
+              <select id="mainTimeSetting">
+                <option value="1">1 Minute (Blitz)</option>
+                <option value="5">5 Minutes</option>
+                <option value="10" selected>10 Minutes</option>
+                <option value="15">15 Minutes</option>
+                <option value="25">25 Minutes</option>
+                <option value="0">No Time Limit</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="byoyomiSetting">Japanese Byo-yomi</label>
+              <select id="byoyomiSetting">
+                <option value="30|3" selected>30s × 3 periods</option>
+                <option value="20|3">20s × 3 periods</option>
+                <option value="15|5">15s × 5 periods</option>
+                <option value="60|3">60s × 3 periods</option>
+                <option value="0|0">None (Sudden Death)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-glow-primary">Create Room & Host</button>
+        </form>
+      </div>
+
+      <!-- Join Room Card -->
+      <div class="glass-card side-card">
+        <div class="card-header">
+          <div class="card-icon">🤝</div>
+          <div>
+            <h2>Join an Opponent</h2>
+            <p>Connect with a room name from your friend.</p>
+          </div>
+        </div>
+
+        <form id="joinRoomForm" class="form-flow">
+          <div class="form-group">
+            <label for="joinPlayerName">Your Username</label>
+            <input type="text" id="joinPlayerName" placeholder="Enter your name..." required autocomplete="off" />
+          </div>
+
+          <div class="form-group">
+            <label for="joinRoomName">Room Name</label>
+            <input type="text" id="joinRoomName" placeholder="Paste room name here..." required autocomplete="off" />
+          </div>
+
+          <button type="submit" class="btn-glow-secondary">Connect & Join Match</button>
+        </form>
+
+        <div class="info-callout">
+          <h4>💡 Direct Invite Link</h4>
+          <p>Once your room is created, click <strong>"Copy Link"</strong> to give your friend instant 1-click access!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Match Archives / Past Games Replay Section -->
+    <section class="archives-section">
+      <div class="archives-header">
+        <div class="archives-title-group">
+          <h2>📚 Past Games Archive</h2>
+          <span class="archives-counter" id="savedGamesCount">0 games stored</span>
+        </div>
+        <button id="clearArchivesBtn" class="btn-ghost btn-sm" title="Clear local game history">Clear History</button>
+      </div>
+      <div class="archives-list" id="archivesList">
+        <div class="empty-archive">No games saved yet. Play and finish a match to analyze the game move-by-move!</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- VIEW 2: Waiting for Opponent Modal -->
+  <div id="waitingModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="loader-spinner"></div>
+      <h2>Waiting for Opponent...</h2>
+      <p>Room <span class="highlight-room" id="waitingRoomName"></span> is ready and waiting for a challenger.</p>
+      
+      <div class="share-box">
+        <input type="text" id="shareUrlInput" readonly />
+        <button id="copyShareUrlBtn" class="btn-primary">Copy Link</button>
+      </div>
+      
+      <div class="settings-summary-tags" id="waitingSettingsSummary"></div>
+
+      <button id="cancelWaitingBtn" class="btn-ghost" style="margin-top: 18px;">Cancel & Return</button>
+    </div>
+  </div>
+
+  <!-- VIEW 3: Undo Request Modal -->
+  <div id="undoModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="card-icon" style="margin-bottom: 12px; font-size: 1.8rem;">↩️</div>
+      <h2>Undo Move Requested</h2>
+      <p id="undoModalText">Your opponent requested to take back their last move. Do you accept?</p>
+      <div class="button-row" style="display: flex; gap: 12px; width: 100%; margin-top: 12px;">
+        <button id="acceptUndoBtn" class="btn-glow-primary" style="flex: 1;">Accept Undo</button>
+        <button id="rejectUndoBtn" class="btn-ghost" style="flex: 1;">Decline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 4: Active Game View -->
+  <div id="gameView" class="view-container hidden">
+    <!-- Top Modern Navigation Bar -->
+    <nav class="game-nav">
+      <div class="brand">
+        <div class="brand-stone-duo">
+          <span class="b-stone"></span>
+          <span class="w-stone"></span>
+        </div>
+        <span class="brand-text">Baduk Online</span>
+        <span class="room-tag" id="activeRoomTag">Room: -</span>
+      </div>
+
+      <div class="nav-actions">
+        <button id="homeReturnBtn" class="nav-btn" title="Back to Main Menu">🏠 Home</button>
+        <button id="reviewModeToggleBtn" class="nav-btn btn-accent hidden" title="Toggle interactive review">🔍 Review Game</button>
+        <button id="copyGameLinkBtn" class="nav-btn" title="Copy Invite Link">🔗 Share Link</button>
+        <button id="leaveGameBtn" class="nav-btn btn-danger-soft">Leave Room</button>
+      </div>
+    </nav>
+
+    <div class="game-board-layout">
+      <!-- Left Panel: Players, Clocks & Action Controls -->
+      <aside class="game-panel left-panel">
+        <!-- Black Player Box -->
+        <div class="player-hud-card" id="blackHud">
+          <div class="hud-top">
+            <div class="hud-identity">
+              <span class="stone-avatar black-stone"></span>
+              <div>
+                <h3 class="player-title" id="blackPlayerName">Black</h3>
+                <span class="player-indicator" id="blackRoleLabel">Player 1</span>
+              </div>
+            </div>
+            <div class="captures-counter">
+              <span class="cap-num" id="blackCaptures">0</span>
+              <span class="cap-label">Prisoners</span>
+            </div>
+          </div>
+          <div class="timer-display" id="blackTimerBox">
+            <span class="main-clock" id="blackMainTime">10:00</span>
+            <span class="byo-clock" id="blackByoyomi">30s (3x)</span>
+          </div>
+        </div>
+
+        <!-- White Player Box -->
+        <div class="player-hud-card" id="whiteHud">
+          <div class="hud-top">
+            <div class="hud-identity">
+              <span class="stone-avatar white-stone"></span>
+              <div>
+                <h3 class="player-title" id="whitePlayerName">White</h3>
+                <span class="player-indicator" id="whiteRoleLabel">Player 2</span>
+              </div>
+            </div>
+            <div class="captures-counter">
+              <span class="cap-num" id="whiteCaptures">0</span>
+              <span class="cap-label">Prisoners</span>
+            </div>
+          </div>
+          <div class="komi-sub">+<span id="displayKomi">6.5</span> Komi</div>
+          <div class="timer-display" id="whiteTimerBox">
+            <span class="main-clock" id="whiteMainTime">10:00</span>
+            <span class="byo-clock" id="whiteByoyomi">30s (3x)</span>
+          </div>
+        </div>
+
+        <!-- Turn & Control Actions -->
+        <div class="action-card" id="gameActionsCard">
+          <div class="turn-status-banner" id="turnBanner">Current Turn: Black</div>
+          <div class="game-action-buttons">
+            <button id="gamePassBtn" class="btn-action btn-warn hidden">Pass Turn</button>
+            <button id="gameUndoBtn" class="btn-action btn-secondary">Request Undo</button>
+            <button id="gameResignBtn" class="btn-action btn-danger">Resign</button>
+          </div>
+        </div>
+
+        <!-- Replay Review Controls Bar -->
+        <div class="action-card hidden" id="reviewControlsCard">
+          <div class="turn-status-banner review-banner" id="reviewBanner">Move 0 / 0</div>
+          <div class="review-nav-bar">
+            <button id="revFirstBtn" class="btn-review-nav" title="First move">⏮️</button>
+            <button id="revPrevBtn" class="btn-review-nav" title="Previous move">◀️ Back</button>
+            <button id="revNextBtn" class="btn-review-nav" title="Next move">Forward ▶️</button>
+            <button id="revLastBtn" class="btn-review-nav" title="Final position">⏭️</button>
+          </div>
+          <div class="review-hint">Tip: Use Left & Right arrow keys to step through moves!</div>
+        </div>
+
+        <!-- Japanese Scoring Removal Card -->
+        <div class="scoring-card hidden" id="scoringCard">
+          <div class="scoring-header">
+            <h4>Japanese Territory Scoring</h4>
+            <span class="scoring-tag">Phase: Removal</span>
+          </div>
+          <p class="scoring-hint">Click stones on the board to mark as dead. Territory highlights automatically.</p>
+          <div class="score-breakdown" id="scoreBreakdown"></div>
+          <button id="confirmScoreBtn" class="btn-glow-primary">Accept Final Score</button>
+        </div>
+      </aside>
+
+      <!-- Center: Go Board Canvas Wrapper -->
+      <main class="board-wrapper">
+        <div class="board-frame">
+          <canvas id="goBoard" width="620" height="620"></canvas>
+        </div>
+      </main>
+
+      <!-- Right Panel: Live Chat & Move History Tabs -->
+      <aside class="game-panel right-panel">
+        <div class="tab-box">
+          <button class="tab-btn active" id="tabChatBtn">💬 Live Chat</button>
+          <button class="tab-btn" id="tabLogBtn">📜 Move History</button>
+        </div>
+
+        <!-- Chat View -->
+        <div class="panel-body" id="chatPanel">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-system-msg">Connected to match. Good luck, have fun!</div>
+          </div>
+          <form id="chatForm" class="chat-input-bar">
+            <input type="text" id="chatInput" placeholder="Send a message..." autocomplete="off" />
+            <button type="submit" class="btn-primary">Send</button>
+          </form>
+        </div>
+
+        <!-- Move History View -->
+        <div class="panel-body hidden" id="logPanel">
+          <div class="moves-list" id="movesList"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="../shared/discord-webhook.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
