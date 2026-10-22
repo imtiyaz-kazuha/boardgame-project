@@ -11,13 +11,20 @@
   <style>
     /* Header / Navbar */
     header {
-      padding: 24px 0;
+      padding: 16px 0;
       border-bottom: 1px solid var(--border-color);
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(9, 13, 22, 0.85);
-      backdrop-filter: blur(12px);
+      background: rgba(9, 13, 22, 0.95);
+      transform: translateZ(0);
+    }
+    @media (min-width: 768px) {
+      header {
+        background: rgba(9, 13, 22, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
     }
     .nav-content {
       display: flex;
@@ -100,14 +107,17 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
       position: relative;
       overflow: hidden;
+      contain: content;
     }
-    .game-card:hover {
-      transform: translateY(-6px);
-      border-color: rgba(255, 255, 255, 0.2);
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+    @media (hover: hover) {
+      .game-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      }
     }
     .game-art-banner {
       width: 100%;

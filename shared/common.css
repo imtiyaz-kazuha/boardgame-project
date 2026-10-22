@@ -33,37 +33,48 @@ body {
   line-height: 1.5;
 }
 
-/* Background Ambient Glows */
+/* Background Ambient Glows - GPU Accelerated & Throttled */
 .ambient-glow {
   position: fixed;
-  width: 600px;
-  height: 600px;
+  width: 500px;
+  height: 500px;
   border-radius: 50%;
-  filter: blur(140px);
+  filter: blur(80px);
   pointer-events: none;
   z-index: 0;
-  opacity: 0.15;
+  opacity: 0.12;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .glow-1 {
-  top: -150px;
-  left: -150px;
-  background: radial-gradient(circle, var(--accent-cyan), transparent);
+  top: -100px;
+  left: -100px;
+  background: radial-gradient(circle, var(--accent-cyan), transparent 70%);
 }
 
 .glow-2 {
-  bottom: -150px;
-  right: -150px;
-  background: radial-gradient(circle, var(--accent-purple), transparent);
+  bottom: -100px;
+  right: -100px;
+  background: radial-gradient(circle, var(--accent-purple), transparent 70%);
 }
 
-/* Glassmorphism Containers */
+/* Glassmorphism Containers - Optimized for Mobile */
 .glass-panel {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(15, 23, 42, 0.88);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
+}
+
+/* Only apply backdrop blur on non-touch or modern high-perf devices */
+@supports (backdrop-filter: blur(8px)) {
+  @media (min-width: 768px) {
+    .glass-panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  }
 }
 
 /* Buttons */
