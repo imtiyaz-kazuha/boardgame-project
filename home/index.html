@@ -394,6 +394,34 @@
           </button>
         </div>
       </article>
+
+      <!-- Game 8: Buzzer Clash: Trivia Duel -->
+      <article class="glass-panel game-card">
+        <div>
+          <div class="game-art-banner" style="background: linear-gradient(135deg, #0284c7, #7c3aed);">
+            <div class="game-badge-status">● Live P2P + Bot</div>
+            <div style="font-size: 4rem;">⚡</div>
+          </div>
+          <div class="game-meta">
+            <span class="meta-tag">👥 2 Players / Bot</span>
+            <span class="meta-tag">🚗 Cars, World & History</span>
+            <span class="meta-tag">⏱️ 15s Buzzer</span>
+            <span class="meta-tag">💥 5s Steal</span>
+          </div>
+          <h2 class="game-title">Buzzer Clash: Trivia Duel</h2>
+          <p class="game-desc">
+            High-stakes first-to-buzz live trivia duel! Race against your friend or a fallible bot. Buzz in first to lock the question. Wrong answers trigger an intense 5-second steal window!
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a href="../trivia/" class="btn btn-primary" style="flex: 2; background: linear-gradient(135deg, #38bdf8, #a855f7); font-weight: 800;">
+            Play Trivia →
+          </a>
+          <button id="triviaRulesBtn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;" onclick="openTriviaRulesModal()">
+            📖 Rules
+          </button>
+        </div>
+      </article>
     </section>
   </main>
 
@@ -758,6 +786,41 @@
     </div>
   </div>
 
+  <!-- Buzzer Clash Rules Modal -->
+  <div id="triviaRulesModal" class="glass-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div class="glass-panel" style="width:100%; max-width:640px; max-height:85vh; overflow-y:auto; padding:28px; border-radius:var(--radius-lg); position:relative; border: 2px solid rgba(56, 189, 248, 0.4);">
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg, #38bdf8, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        ⚡ How to Play: Buzzer Clash
+      </h2>
+      
+      <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
+        <section>
+          <h4 style="color:#38bdf8; margin-bottom:4px; font-weight:800;">⏱️ The 15-Second Buzzer</h4>
+          <p>Each question has a 15-second countdown. <strong>First player to tap an answer locks the question!</strong> If nobody answers within 15 seconds, the question is automatically skipped and no points are awarded.</p>
+        </section>
+
+        <section>
+          <h4 style="color:#10b981; margin-bottom:4px; font-weight:800;">🎯 Correct Answer & Speed Points</h4>
+          <p>Answering correctly awards high points based on speed (up to <strong>1,100 pts</strong> for immediate buzzes, scaling down with the timer).</p>
+        </section>
+
+        <section>
+          <h4 style="color:#ef4444; margin-bottom:4px; font-weight:800;">💥 Wrong Answer Penalty & 5-Second Steal</h4>
+          <p>If you buzz in and answer <strong>wrong</strong>, you suffer a <strong>-250 point penalty</strong> and are locked out. Your opponent gets an intense <strong>5-second Steal Window</strong> to claim the points!</p>
+        </section>
+
+        <section>
+          <h4 style="color:#fbbf24; margin-bottom:4px; font-weight:800;">🤖 Fallible AI & Custom Settings</h4>
+          <p>Choose between 10, 20, or 30 questions across Cars & Automotive, Geography, History, Science, or All. In Solo mode, the AI simulates real human thinking delay and realistic mistakes (~50% to ~85% accuracy depending on difficulty)!</p>
+        </section>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #38bdf8, #a855f7); font-weight:800;" onclick="closeTriviaRulesModal()">
+        Got it! Close Rules
+      </button>
+    </div>
+  </div>
+
   <script>
     function openRulesModal() {
       document.getElementById('rulesModal').style.display = 'flex';
@@ -800,6 +863,12 @@
     }
     function closeGoRulesModal() {
       document.getElementById('goRulesModal').style.display = 'none';
+    }
+    function openTriviaRulesModal() {
+      document.getElementById('triviaRulesModal').style.display = 'flex';
+    }
+    function closeTriviaRulesModal() {
+      document.getElementById('triviaRulesModal').style.display = 'none';
     }
   </script>
 

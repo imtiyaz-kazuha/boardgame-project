@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buzzer Clash: Trivia Duel | Imtiboard</title>
+  <link rel="stylesheet" href="../shared/common.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="../shared/multi-peer-engine.js"></script>
+  <script src="../shared/discord-webhook.js"></script>
+  <style>
+    :root {
+      --neon-cyan: #38bdf8;
+      --neon-purple: #a855f7;
+      --neon-amber: #f59e0b;
+      --neon-red: #ef4444;
+      --neon-green: #10b981;
+    }
+
+    body {
+      background-color: #030712;
+      background-image: 
+        radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 80% 90%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Top Navigation */
+    .game-nav {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(9, 13, 22, 0.85);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    /* Arena Viewport */
+    .arena-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      max-width: 860px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Scoreboard Battle Header */
+    .battle-hud {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .player-pod {
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .player-pod.active-buzzer {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+      transform: scale(1.02);
+    }
+
+    .player-pod.locked-out {
+      opacity: 0.5;
+      border-color: var(--neon-red);
+      filter: grayscale(0.5);
+    }
+
+    .player-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    .player-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .player-name {
+      font-weight: 800;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--neon-amber);
+    }
+
+    .center-timer-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid var(--neon-cyan);
+      min-width: 90px;
+    }
+
+    .timer-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.6rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .timer-label {
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Question Card */
+    .question-card {
+      width: 100%;
+      padding: 24px 20px;
+      border-radius: var(--radius-lg);
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .genre-tag {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #c084fc;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.5px;
+    }
+
+    .q-number-tag {
+      color: var(--text-muted);
+    }
+
+    .question-text {
+      font-size: clamp(1.15rem, 3.5vw, 1.45rem);
+      font-weight: 800;
+      line-height: 1.45;
+      color: #f8fafc;
+      min-height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Answers Grid */
+    .answers-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .answers-grid {
+        grid-template-columns: 1fr;
+      }
+      .battle-hud {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .center-timer-box {
+        margin: 4px auto;
+      }
+    }
+
+    .answer-btn {
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      background: rgba(30, 41, 59, 0.75);
+      border: 2px solid rgba(255, 255, 255, 0.08);
+      color: #f1f5f9;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.15s ease;
+      position: relative;
+      text-align: left;
+    }
+
+    .answer-letter {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 0.85rem;
+      color: var(--neon-cyan);
+      flex-shrink: 0;
+    }
+
+    .answer-btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .answer-btn:hover:not(:disabled) {
+      border-color: rgba(56, 189, 248, 0.6);
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .answer-btn.correct {
+      background: rgba(16, 185, 129, 0.3) !important;
+      border-color: #10b981 !important;
+      color: #34d399 !important;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .answer-btn.incorrect {
+      background: rgba(239, 68, 68, 0.3) !important;
+      border-color: #ef4444 !important;
+      color: #f87171 !important;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+
+    .answer-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    /* Live Status Banner */
+    .status-toast {
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--border-color);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 520px;
+      background: #0f172a;
+      border: 2px solid rgba(56, 189, 248, 0.4);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="game-nav">
+    <a href="../home/" style="display:flex; align-items:center; gap:8px; text-decoration:none; color:#fff; font-weight:700;">
+      <span>← Hub Portal</span>
+    </a>
+    <div style="font-weight:800; font-size:1.1rem; background:linear-gradient(135deg, #38bdf8, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+      ⚡ Buzzer Clash: Trivia Duel
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button id="openLobbyBtn" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem;">
+        ⚙️ Settings / Rooms
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Game Arena -->
+  <main class="arena-viewport">
+    
+    <!-- Scoreboard HUD -->
+    <div class="battle-hud">
+      <!-- Player 1 Pod -->
+      <div id="p1Pod" class="player-pod">
+        <div class="player-avatar" id="p1Avatar">😎</div>
+        <div class="player-info">
+          <div class="player-name" id="p1Name">You</div>
+          <div class="player-score" id="p1Score">0 pts</div>
+        </div>
+        <div id="p1StatusBadge" style="font-size:0.7rem; font-weight:800; color:var(--neon-cyan);">READY</div>
+      </div>
+
+      <!-- Center Timer -->
+      <div class="center-timer-box" id="timerBox">
+        <div class="timer-val" id="countdownVal">15</div>
+        <div class="timer-label" id="timerLabel">BUZZER OPEN</div>
+      </div>
+
+      <!-- Player 2 / Bot Pod -->
+      <div id="p2Pod" class="player-pod">
+        <div class="player-avatar" id="p2Avatar">🤖</div>
+        <div class="player-info">
+          <div class="player-name" id="p2Name">Athena AI</div>
+          <div class="player-score" id="p2Score">0 pts</div>
+        </div>
+        <div id="p2StatusBadge" style="font-size:0.7rem; font-weight:800; color:var(--neon-purple);">READY</div>
+      </div>
+    </div>
+
+    <!-- Question Card -->
+    <div class="question-card" id="questionCard">
+      <div class="meta-bar">
+        <span class="genre-tag" id="qGenreTag">General Knowledge</span>
+        <span class="q-number-tag" id="qProgressTag">Question 1 / 20</span>
+      </div>
+      <div class="question-text" id="qText">
+        Loading fresh questions from the global trivia network...
+      </div>
+    </div>
+
+    <!-- Answer Buttons Grid -->
+    <div class="answers-grid" id="answersGrid">
+      <button class="answer-btn" id="ans0" onclick="handleAnswerClick(0)">
+        <span class="answer-letter">A</span>
+        <span class="answer-text">Option A</span>
+      </button>
+      <button class="answer-btn" id="ans1" onclick="handleAnswerClick(1)">
+        <span class="answer-letter">B</span>
+        <span class="answer-text">Option B</span>
+      </button>
+      <button class="answer-btn" id="ans2" onclick="handleAnswerClick(2)">
+        <span class="answer-letter">C</span>
+        <span class="answer-text">Option C</span>
+      </button>
+      <button class="answer-btn" id="ans3" onclick="handleAnswerClick(3)">
+        <span class="answer-letter">D</span>
+        <span class="answer-text">Option D</span>
+      </button>
+    </div>
+
+    <!-- Live Toast Status -->
+    <div class="status-toast" id="liveStatusToast">
+      <span>⚡</span>
+      <span id="statusMsg">First to buzz in locks the question! Wrong answer gives 5s steal opportunity.</span>
+    </div>
+
+  </main>
+
+  <!-- LOBBY & CUSTOM MATCH SETTINGS MODAL -->
+  <div id="lobbyModal" class="modal-overlay">
+    <div class="modal-card">
+      <h2 style="font-size:1.4rem; font-weight:900; margin-bottom:12px; background:linear-gradient(135deg, #38bdf8, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        ⚙️ Match Setup & Room
+      </h2>
+
+      <!-- Mode Selection Tabs -->
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button id="tabAiModeBtn" class="btn btn-primary" style="flex:1; padding:8px; font-size:0.85rem;" onclick="setMode('ai')">
+          🤖 Solo vs Bot
+        </button>
+        <button id="tabHostModeBtn" class="btn btn-secondary" style="flex:1; padding:8px; font-size:0.85rem;" onclick="setMode('host')">
+          👑 Host P2P
+        </button>
+        <button id="tabJoinModeBtn" class="btn btn-secondary" style="flex:1; padding:8px; font-size:0.85rem;" onclick="setMode('join')">
+          🔗 Join P2P
+        </button>
+      </div>
+
+      <!-- Settings Form -->
+      <div id="settingsSection">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Your Player Name</label>
+          <input id="playerNameInput" type="text" value="Brainiac" style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--border-color); color:#fff; font-weight:700;">
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Category / Genre</label>
+          <select id="genreSelect" style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(0,0,0,0.8); border:1px solid var(--border-color); color:#fff; font-weight:700;">
+            <option value="all">🎲 All Categories (Mixed World Trivia)</option>
+            <option value="cars">🚗 Cars & Automotive (Vehicles, F1, Supercars)</option>
+            <option value="geography">🌍 World Geography (Countries, Capitals, Flags)</option>
+            <option value="history">📜 World History (Ancient, Wars, Civilizations)</option>
+            <option value="science">🧪 Science & Nature (Physics, Space, Biology)</option>
+            <option value="film_and_tv">🎬 Movies, Anime & Pop Culture</option>
+            <option value="sport_and_leisure">🏆 Sports & Legends</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+          <div>
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Total Questions</label>
+            <select id="questionCountSelect" style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(0,0,0,0.8); border:1px solid var(--border-color); color:#fff; font-weight:700;">
+              <option value="10">10 Questions (Quick)</option>
+              <option value="20" selected>20 Questions (Standard)</option>
+              <option value="30">30 Questions (Marathon)</option>
+            </select>
+          </div>
+
+          <div id="botDifficultyWrapper">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Bot Opponent</label>
+            <select id="botDiffSelect" style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(0,0,0,0.8); border:1px solid var(--border-color); color:#fff; font-weight:700;">
+              <option value="rookie">🟢 Casual Rookie (~45% accuracy)</option>
+              <option value="scholar" selected>🟡 Scholar (~70% accuracy)</option>
+              <option value="master">🔴 Grandmaster (~85% accuracy)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Host Waiting Box -->
+      <div id="hostWaitingArea" style="display:none; padding:12px; border-radius:10px; background:rgba(0,0,0,0.4); border:1px solid var(--border-color); margin-bottom:14px; text-align:center;">
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">Share Room Code with Friend:</div>
+        <input id="shareRoomInput" type="text" readonly style="width:100%; text-align:center; padding:8px; border-radius:6px; background:#000; color:#38bdf8; font-weight:800; border:1px solid var(--border-color);">
+        <div id="connectedPeerBadge" style="margin-top:6px; font-size:0.8rem; color:#f59e0b;">Waiting for opponent to connect...</div>
+      </div>
+
+      <!-- Join Room Box -->
+      <div id="joinInputArea" style="display:none; margin-bottom:14px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Room Code / URL</label>
+        <input id="joinRoomInput" type="text" placeholder="e.g. clash-1234" style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--border-color); color:#fff; font-weight:700;">
+      </div>
+
+      <!-- Start / Action Button -->
+      <button id="modalActionBtn" class="btn btn-primary" style="width:100%; padding:12px; font-weight:800; font-size:1rem;" onclick="handleModalAction()">
+        🚀 Start Match vs Bot
+      </button>
+      <button class="btn btn-secondary" style="width:100%; margin-top:8px; padding:8px; font-size:0.85rem;" onclick="closeLobbyModal()">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- VICTORY / GAME OVER MODAL -->
+  <div id="victoryModal" class="modal-overlay">
+    <div class="modal-card" style="text-align:center;">
+      <div style="font-size:3.5rem; margin-bottom:8px;" id="vicEmoji">🏆</div>
+      <h2 style="font-size:1.8rem; font-weight:900; margin-bottom:4px;" id="vicTitle">BRAINIAC VICTORIOUS!</h2>
+      <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;" id="vicSubtitle">Total questions completed. Match report dispatched to Discord!</p>
+
+      <div style="background:rgba(0,0,0,0.5); padding:16px; border-radius:12px; border:1px solid var(--border-color); margin-bottom:20px; text-align:left;" id="vicBreakdown">
+        <!-- Ranks populated dynamically -->
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; padding:12px; font-weight:800; font-size:1rem;" onclick="startNewGameFromVictory()">
+        🔄 Play Another Match
+      </button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
