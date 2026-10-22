@@ -203,25 +203,33 @@ function renderTableLayout() {
 
   const table = document.getElementById('circleTable');
   const radiusX = table.clientWidth / 2 + 15;
-  const radiusY = table.clientHeight / 2 + 10;
+  const radiusY = table.clientHeight / 2 + 5;
   const cx = table.clientWidth / 2;
   const cy = table.clientHeight / 2;
 
-  const total = coupState.players.length;
+  // Active rival opponents (excluding player 0 / me, who is in bottom dock)
+  const otherPlayers = coupState.players.filter(p => p.id !== 0);
+  const totalOthers = otherPlayers.length;
 
-  coupState.players.forEach((p, idx) => {
-    // Circle angle: player 0 is at bottom (angle Math.PI / 2)
-    const angle = (Math.PI / 2) + (idx * ((2 * Math.PI) / total));
+  otherPlayers.forEach((p, index) => {
+    // Distribute rival seats along the top/side arc of the table (from 170 deg to 10 deg)
+    // Avoid placing any seat at bottom (90 deg) where player 0's hand dock is!
+    const startAngle = Math.PI * 0.95; // Left-mid
+    const endAngle = Math.PI * 0.05;   // Right-mid
+    
+    // Spread evenly across top arc
+    const angle = totalOthers === 1 ? -Math.PI / 2 : startAngle + index * ((2 * Math.PI - (startAngle - endAngle)) / (totalOthers - 1));
+
     const x = cx + radiusX * Math.cos(angle) - 70; // 70 = half width of seat
     const y = cy + radiusY * Math.sin(angle) - 45;
 
     const seat = document.createElement('div');
-    seat.id = `seat_${idx}`;
+    seat.id = `seat_${p.id}`;
     seat.className = `player-seat ${isPlayerDead(p) ? 'seat-dead' : ''}`;
     seat.style.left = `${x}px`;
     seat.style.top = `${y}px`;
 
-    const isCurrent = (coupState.currentTurn === idx && !coupState.winner);
+    const isCurrent = (coupState.currentTurn === p.id && !coupState.winner);
 
     let cardsHtml = '';
     p.cards.forEach(c => {
@@ -234,7 +242,7 @@ function renderTableLayout() {
 
     seat.innerHTML = `
       <div class="seat-badge ${isCurrent ? 'seat-active' : ''}">
-        <div class="seat-name" style="color:${idx === 0 ? '#38bdf8' : '#f8fafc'};">
+        <div class="seat-name" style="color:#f8fafc;">
           ${p.name} ${p.isBot ? '<span style="font-size:0.68rem; color:#94a3b8;">🤖</span>' : ''}
         </div>
         <div class="seat-coins">🪙 ${p.coins} Coins</div>
