@@ -327,6 +327,29 @@
           </button>
         </div>
       </article>
+
+      <!-- Game 4: Dancing Criminal (Criminal Dance) -->
+      <article class="glass-panel game-card">
+        <div>
+          <div class="game-meta">
+            <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">🕵️ Social Deduction</span>
+            <span class="badge">👥 3-6 Players</span>
+            <span class="badge">⏱️ 3-5 Min</span>
+          </div>
+          <h2 class="game-title">Dancing Criminal</h2>
+          <p class="game-desc">
+            The thrilling deduction card game where the Criminal card secretly dances from hand to hand! As Detective, question suspects, deploy the police dog, and deduce who holds the Criminal. As the Criminal, pass undetected and escape by playing your card as the grand finale!
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a href="../criminaldance/" class="btn btn-primary" style="flex: 2; background: linear-gradient(135deg, #38bdf8, #f59e0b, #ef4444);">
+            Play Criminal →
+          </a>
+          <button id="crimRulesBtn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;" onclick="openCrimRulesModal()">
+            📖 Rules
+          </button>
+        </div>
+      </article>
     </section>
   </main>
 
@@ -465,6 +488,48 @@
     </div>
   </div>
 
+  <!-- Dancing Criminal Rules Modal -->
+  <div id="crimRulesModal" class="glass-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div class="glass-panel" style="width:100%; max-width:620px; max-height:85vh; overflow-y:auto; padding:28px; border-radius:var(--radius-lg); position:relative;">
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg, #38bdf8, #f59e0b, #ef4444); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        🕵️ How to Play: Dancing Criminal
+      </h2>
+      
+      <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎯 Objective & Win Conditions</h4>
+          <p>Every player starts with <strong>4 cards</strong>. The Criminal card travels secretly between players through card trades and rumor swaps!</p>
+          <ul style="padding-left:20px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+            <li><strong style="color:#ef4444;">🦹 Criminal Victory:</strong> If you hold the Criminal and play it as your <strong>very last card in hand</strong> without getting caught, you and any Accomplice win immediately!</li>
+            <li><strong style="color:#38bdf8;">🕵️ Detective Victory:</strong> If you play the <strong>Detective</strong> card (against a target with \(\le 3\) cards) or <strong>Police Dog</strong> and catch the Criminal holder, the Detective team wins!</li>
+          </ul>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🃏 Core Cards & Powers</h4>
+          <ul style="padding-left:20px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+            <li><strong>🦹 Criminal:</strong> Can ONLY be played as your final remaining card!</li>
+            <li><strong>🕵️ Detective:</strong> Accuse a suspect with 3 or fewer cards. If correct, Detective wins!</li>
+            <li><strong>🐕 Police Dog:</strong> Sniffs 1 card from a target suspect's hand to see if it is the Criminal.</li>
+            <li><strong>🤝 Accomplice:</strong> You secretly become an ally to the Criminal and win together!</li>
+            <li><strong>🪓 Alibi:</strong> Allows you to claim "Innocent" if accused by the Detective.</li>
+            <li><strong>🔄 Information Trade:</strong> All players simultaneously pass 1 card to the left!</li>
+            <li><strong>🤫 Rumor:</strong> Everyone takes 1 random card from the player on their right.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🤖 Solo with Bots or P2P Multiplayer</h4>
+          <p>Play with <strong>3 to 6 players</strong>! Jump straight into a match against intelligent tactical bots, or host a room for friends.</p>
+        </section>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #38bdf8, #f59e0b, #ef4444);" onclick="closeCrimRulesModal()">
+        Got it! Close Rules
+      </button>
+    </div>
+  </div>
+
   <script>
     function openRulesModal() {
       document.getElementById('rulesModal').style.display = 'flex';
@@ -483,6 +548,12 @@
     }
     function closeCoupRulesModal() {
       document.getElementById('coupRulesModal').style.display = 'none';
+    }
+    function openCrimRulesModal() {
+      document.getElementById('crimRulesModal').style.display = 'flex';
+    }
+    function closeCrimRulesModal() {
+      document.getElementById('crimRulesModal').style.display = 'none';
     }
   </script>
 
