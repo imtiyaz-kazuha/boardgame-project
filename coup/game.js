@@ -287,7 +287,7 @@ function renderMyHand() {
     cardEl.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <span style="font-size:0.75rem; font-weight:800; color:#fbbf24;">INFLUENCE</span>
-        <span style="font-size:0.75rem;">${card.isAlive ? 'ACTIVE' : 'DEAD'}</span>
+        ${card.isAlive ? '' : '<span style="font-size:0.75rem; color:#ef4444; font-weight:800;">ELIMINATED</span>'}
       </div>
       <div class="card-portrait">${card.icon}</div>
       <div>
@@ -484,9 +484,18 @@ function startReactionPhase(stage) {
 
   const banner = document.getElementById('reactionBanner');
   const btnChallenge = document.getElementById('btnChallenge');
-  const btnBlock = document.getElementById('btnBlock');
+  const btnBlockCaptain = document.getElementById('btnBlockCaptain');
+  const btnBlockAmbassador = document.getElementById('btnBlockAmbassador');
+  const btnBlockContessa = document.getElementById('btnBlockContessa');
+  const btnBlockDuke = document.getElementById('btnBlockDuke');
   const btnPass = document.getElementById('btnPass');
   const countdownBadge = document.getElementById('reactionCountdownBadge');
+
+  // Reset all block buttons display
+  if (btnBlockCaptain) btnBlockCaptain.style.display = 'none';
+  if (btnBlockAmbassador) btnBlockAmbassador.style.display = 'none';
+  if (btnBlockContessa) btnBlockContessa.style.display = 'none';
+  if (btnBlockDuke) btnBlockDuke.style.display = 'none';
 
   // Human reaction banner eligibility:
   // In stage 1 (action): cannot challenge own action!
@@ -504,40 +513,54 @@ function startReactionPhase(stage) {
     banner.style.display = 'flex';
 
     if (stage === 'action_challenge_or_block') {
+      // ANY LIVING OPPONENT can challenge the action!
       btnChallenge.style.display = action.canBeChallenged ? 'inline-flex' : 'none';
 
       // Specific descriptive titles for actions
       if (action.actionType === 'steal') {
+        const isTarget = (action.targetIdx === coupState.myPlayerIdx);
         document.getElementById('reactionTitle').textContent = `Steal Action (Captain)`;
-        document.getElementById('reactionDesc').textContent = `${actor.name} claims Captain to steal 2 coins from ${target ? target.name : 'you'}!`;
-      } else if (action.actionType === 'tax') {
-        document.getElementById('reactionTitle').textContent = `Tax Action (Duke)`;
-        document.getElementById('reactionDesc').textContent = `${actor.name} claims Duke to take 3 Tax coins from Treasury.`;
+        document.getElementById('reactionDesc').textContent = isTarget
+          ? `${actor.name} is attempting to STEAL 2 coins from YOU! Challenge or Block with Captain/Ambassador!`
+          : `${actor.name} claims Captain to steal 2 coins from ${target ? target.name : 'rival'}. (Only ${target ? target.name : 'target'} can block, but YOU can challenge!)`;
+
+        // RULE: ONLY the player being stolen from can BLOCK (with Captain or Ambassador)
+        if (isTarget) {
+          if (btnBlockCaptain) btnBlockCaptain.style.display = 'inline-flex';
+          if (btnBlockAmbassador) btnBlockAmbassador.style.display = 'inline-flex';
+        }
       } else if (action.actionType === 'assassinate') {
+        const isTarget = (action.targetIdx === coupState.myPlayerIdx);
         document.getElementById('reactionTitle').textContent = `Assassination (Assassin)`;
-        document.getElementById('reactionDesc').textContent = `${actor.name} claims Assassin targeting ${target ? target.name : 'you'}!`;
+        document.getElementById('reactionDesc').textContent = isTarget
+          ? `⚠️ ${actor.name} is attempting to ASSASSINATE your influence! Challenge their Assassin or Block with Contessa!`
+          : `${actor.name} claims Assassin targeting ${target ? target.name : 'rival'}. (Only ${target ? target.name : 'target'} can block, but YOU can challenge!)`;
+
+        // RULE: ONLY the player being assassinated can BLOCK (with Contessa)
+        if (isTarget) {
+          if (btnBlockContessa) btnBlockContessa.style.display = 'inline-flex';
+        }
       } else if (action.actionType === 'foreign_aid') {
         document.getElementById('reactionTitle').textContent = `Foreign Aid (+2 Coins)`;
-        document.getElementById('reactionDesc').textContent = `${actor.name} claims Foreign Aid. (Can be blocked by Duke)`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Foreign Aid. (ANY player can claim Duke to block!)`;
+
+        // RULE: ANY player can claim Duke to block Foreign Aid!
+        if (btnBlockDuke) btnBlockDuke.style.display = 'inline-flex';
+      } else if (action.actionType === 'tax') {
+        document.getElementById('reactionTitle').textContent = `Tax Action (Duke)`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Duke to take 3 Tax coins from Treasury. (Unblockable, but can be challenged!)`;
       } else if (action.actionType === 'exchange') {
         document.getElementById('reactionTitle').textContent = `Exchange Action (Ambassador)`;
-        document.getElementById('reactionDesc').textContent = `${actor.name} claims Ambassador to exchange court cards.`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Ambassador to exchange court cards. (Can be challenged!)`;
       } else {
         document.getElementById('reactionTitle').textContent = `Action by ${actor.name}`;
         document.getElementById('reactionDesc').textContent = `Will anyone challenge or block?`;
       }
 
-      // Can I block?
-      let canIBlock = false;
-      if (action.actionType === 'foreign_aid') canIBlock = true; // Anyone can claim Duke
-      if (action.actionType === 'steal' && action.targetIdx === coupState.myPlayerIdx) canIBlock = true; // Target can claim Captain/Ambassador
-      if (action.actionType === 'assassinate' && action.targetIdx === coupState.myPlayerIdx) canIBlock = true; // Target can claim Contessa
-
-      btnBlock.style.display = canIBlock ? 'inline-flex' : 'none';
     } else if (stage === 'block_challenge') {
       const blocker = coupState.players[action.blockedBy];
+      // In block challenge: ANYONE can challenge the blocker, block buttons are hidden
       btnChallenge.style.display = 'inline-flex';
-      btnBlock.style.display = 'none';
 
       // Explicit description of who blocked what:
       if (action.actionType === 'steal') {
@@ -719,25 +742,36 @@ function botDecidesToChallenge(bot, claimedRole) {
   return Math.random() < 0.08;
 }
 
-// Bot Block Decision Heuristic
+// Bot Block Decision Heuristic (Strict targeting rules enforcement)
 function botDecidesToBlock(bot, action) {
-  // Foreign Aid block: Claim Duke
+  // Foreign Aid block: ANY living player can claim Duke
   if (action.actionType === 'foreign_aid') {
     const hasDuke = bot.cards.some(c => c.isAlive && c.key === 'duke');
     if (hasDuke || Math.random() < 0.35) return ROLES.DUKE;
   }
-  // Steal block: Target claims Captain or Ambassador
-  if (action.actionType === 'steal' && action.targetIdx === bot.id) {
-    const hasShield = bot.cards.some(c => c.isAlive && (c.key === 'captain' || c.key === 'ambassador'));
-    if (hasShield) return ROLES.CAPTAIN;
-    if (Math.random() < 0.5) return ROLES.CAPTAIN; // Defensive bluff
+
+  // Steal block: ONLY the victim being stolen from can block! (Can claim Captain or Ambassador)
+  if (action.actionType === 'steal') {
+    if (action.targetIdx !== bot.id) return null; // Non-targets CANNOT block stealing!
+
+    const hasCaptain = bot.cards.some(c => c.isAlive && c.key === 'captain');
+    const hasAmbassador = bot.cards.some(c => c.isAlive && c.key === 'ambassador');
+
+    if (hasCaptain) return ROLES.CAPTAIN;
+    if (hasAmbassador) return ROLES.AMBASSADOR;
+    // Bluff block with 50% probability
+    if (Math.random() < 0.5) return (Math.random() < 0.5 ? ROLES.CAPTAIN : ROLES.AMBASSADOR);
   }
-  // Assassination block: Target claims Contessa
-  if (action.actionType === 'assassinate' && action.targetIdx === bot.id) {
+
+  // Assassination block: ONLY the victim being assassinated can block! (Can claim Contessa)
+  if (action.actionType === 'assassinate') {
+    if (action.targetIdx !== bot.id) return null; // Non-targets CANNOT block assassination!
+
     const hasContessa = bot.cards.some(c => c.isAlive && c.key === 'contessa');
     if (hasContessa) return ROLES.CONTESSA;
     if (Math.random() < 0.75) return ROLES.CONTESSA; // Desperate bluff to survive!
   }
+
   return null;
 }
 
@@ -1186,16 +1220,23 @@ function setupUIEventListeners() {
     }
   });
 
-  document.getElementById('btnBlock').addEventListener('click', () => {
-    clearReactionTimer();
-    document.getElementById('reactionBanner').style.display = 'none';
-    const action = coupState.pendingAction;
-    if (!action) return;
-    let blockRole = ROLES.DUKE;
-    if (action.actionType === 'steal') blockRole = ROLES.CAPTAIN;
-    if (action.actionType === 'assassinate') blockRole = ROLES.CONTESSA;
-    declareBlock(coupState.myPlayerIdx, blockRole);
-  });
+  // Block Button Listeners with specific role declarations
+  const setupBlockBtn = (btnId, role) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      clearReactionTimer();
+      document.getElementById('reactionBanner').style.display = 'none';
+      const action = coupState.pendingAction;
+      if (!action) return;
+      declareBlock(coupState.myPlayerIdx, role);
+    });
+  };
+
+  setupBlockBtn('btnBlockCaptain', ROLES.CAPTAIN);
+  setupBlockBtn('btnBlockAmbassador', ROLES.AMBASSADOR);
+  setupBlockBtn('btnBlockContessa', ROLES.CONTESSA);
+  setupBlockBtn('btnBlockDuke', ROLES.DUKE);
 
   document.getElementById('btnPass').addEventListener('click', () => {
     clearReactionTimer();

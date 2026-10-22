@@ -619,12 +619,21 @@
       </div>
       <div id="reactionDesc" style="font-size:0.82rem; color:#cbd5e1; margin-top:2px;">Will anyone challenge or block?</div>
     </div>
-    <div style="display: flex; gap: 8px; margin-left: 12px;">
+    <div style="display: flex; gap: 8px; margin-left: 12px; flex-wrap: wrap; justify-content: flex-end;">
       <button id="btnChallenge" class="btn btn-primary" style="background:#dc2626; border-color:#ef4444; font-size:0.8rem; padding:6px 14px;">
         ⚔️ Challenge!
       </button>
-      <button id="btnBlock" class="btn btn-accent" style="background:#8b5cf6; border-color:#a855f7; font-size:0.8rem; padding:6px 14px;">
-        🛡️ Block
+      <button id="btnBlockCaptain" class="btn btn-accent" style="background:#0284c7; border-color:#38bdf8; font-size:0.8rem; padding:6px 12px; display:none;">
+        🛡️ Captain (Block)
+      </button>
+      <button id="btnBlockAmbassador" class="btn btn-accent" style="background:#059669; border-color:#34d399; font-size:0.8rem; padding:6px 12px; display:none;">
+        🛡️ Ambassador (Block)
+      </button>
+      <button id="btnBlockContessa" class="btn btn-accent" style="background:#713f12; border-color:#facc15; font-size:0.8rem; padding:6px 12px; display:none;">
+        🛡️ Contessa (Block)
+      </button>
+      <button id="btnBlockDuke" class="btn btn-accent" style="background:#7e22ce; border-color:#c084fc; font-size:0.8rem; padding:6px 12px; display:none;">
+        🛡️ Duke (Block)
       </button>
       <button id="btnPass" class="btn btn-secondary" style="font-size:0.8rem; padding:6px 14px;">
         ✓ Pass (Allow)
@@ -867,6 +876,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.7"></script>
+  <script src="game.js?v=1.8"></script>
 </body>
 </html>
