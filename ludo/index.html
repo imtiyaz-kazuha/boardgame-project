@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ludo Royale | 4-Player Strategy Board Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/common.css">
+  
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="../shared/multi-peer-engine.js"></script>
+
+  <style>
+    body {
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    .ludo-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+      padding: 16px 20px 40px;
+      max-width: 1300px;
+      margin: 0 auto;
+      min-height: calc(100vh - 75px);
+      box-sizing: border-box;
+    }
+    @media (max-width: 1024px) {
+      .ludo-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Board Area */
+    .board-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(12px);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.5);
+    }
+
+    .ludo-canvas-box {
+      width: 100%;
+      max-width: 580px;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      background: #0f172a;
+    }
+    #ludoCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: pointer;
+    }
+
+    /* Dice Section */
+    .dice-panel {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .dice-cube {
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      background: #f8fafc;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 0 8px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .dice-cube:hover {
+      transform: scale(1.08);
+      box-shadow: 0 10px 24px rgba(56, 189, 248, 0.5);
+    }
+    .dice-rolling {
+      animation: diceRollAnim 0.4s infinite linear;
+    }
+    @keyframes diceRollAnim {
+      0% { transform: rotate(0deg) scale(0.95); }
+      50% { transform: rotate(180deg) scale(1.1); }
+      100% { transform: rotate(360deg) scale(0.95); }
+    }
+
+    /* Sidebar Players */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card-panel {
+      padding: 18px;
+    }
+    .player-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.03);
+      transition: all 0.3s ease;
+    }
+    .active-turn {
+      box-shadow: 0 0 14px rgba(255,255,255,0.2);
+      border-color: #fff !important;
+    }
+
+    .player-red { border-left: 5px solid #ef4444; }
+    .player-green { border-left: 5px solid #10b981; }
+    .player-yellow { border-left: 5px solid #facc15; }
+    .player-blue { border-left: 5px solid #38bdf8; }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(10px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-card {
+      width: 100%;
+      max-width: 480px;
+      padding: 28px;
+      text-align: left;
+    }
+    .tab-group {
+      display: flex;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--accent-cyan);
+      color: #0f172a;
+      border-color: var(--accent-cyan);
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+
+    /* Toast */
+    .toast-overlay {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 10005;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast-box {
+      pointer-events: auto;
+      min-width: 260px;
+      max-width: 360px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .toast-show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient Glows -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-overlay"></div>
+
+  <!-- Header -->
+  <header style="padding: 12px 0; border-bottom: 1px solid var(--border-color); background: rgba(9, 13, 22, 0.85); backdrop-filter: blur(12px); position: sticky; top:0; z-index:100;">
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+      <a href="../home/" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: #fff; font-weight: 700;">
+        <span>← Hub</span>
+      </a>
+      <div style="font-weight: 800; font-size: 1.15rem; background: linear-gradient(135deg, #ef4444, #facc15, #10b981, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        🎲 Ludo Royale
+      </div>
+      <button id="openLobbyBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">
+        👥 Lobby / Bots
+      </button>
+    </div>
+  </header>
+
+  <main class="container ludo-layout">
+    <!-- Board & Dice Area -->
+    <section class="board-wrapper">
+      <div class="ludo-canvas-box">
+        <canvas id="ludoCanvas" width="600" height="600"></canvas>
+      </div>
+
+      <!-- Controls -->
+      <div class="dice-panel">
+        <div id="diceCube" class="dice-cube">🎲</div>
+        <div>
+          <button id="rollBtn" class="btn btn-primary" style="padding: 12px 24px; font-size: 1rem;">
+            Roll Dice 🎲
+          </button>
+          <div id="turnPrompt" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
+            Roll a 6 to release a token from your yard!
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sidebar Players & Rankings -->
+    <aside class="sidebar">
+      <div class="glass-panel card-panel">
+        <h3 style="font-size: 1rem; margin-bottom: 12px;">🏆 Match Players</h3>
+        
+        <div id="pRedCard" class="player-row player-red active-turn">
+          <div>
+            <div id="pRedName" style="font-weight: 700; color: #ef4444;">Player 1 (Red)</div>
+            <div id="pRedType" style="font-size: 0.75rem; color: var(--text-muted);">Human</div>
+          </div>
+          <div id="pRedScore" style="font-size: 1.1rem; font-weight: 800;">0/4 Home</div>
+        </div>
+
+        <div id="pGreenCard" class="player-row player-green">
+          <div>
+            <div id="pGreenName" style="font-weight: 700; color: #10b981;">Player 2 (Green)</div>
+            <div id="pGreenType" style="font-size: 0.75rem; color: var(--text-muted);">Bot</div>
+          </div>
+          <div id="pGreenScore" style="font-size: 1.1rem; font-weight: 800;">0/4 Home</div>
+        </div>
+
+        <div id="pYellowCard" class="player-row player-yellow">
+          <div>
+            <div id="pYellowName" style="font-weight: 700; color: #facc15;">Player 3 (Yellow)</div>
+            <div id="pYellowType" style="font-size: 0.75rem; color: var(--text-muted);">Bot</div>
+          </div>
+          <div id="pYellowScore" style="font-size: 1.1rem; font-weight: 800;">0/4 Home</div>
+        </div>
+
+        <div id="pBlueCard" class="player-row player-blue">
+          <div>
+            <div id="pBlueName" style="font-weight: 700; color: #38bdf8;">Player 4 (Blue)</div>
+            <div id="pBlueType" style="font-size: 0.75rem; color: var(--text-muted);">Bot</div>
+          </div>
+          <div id="pBlueScore" style="font-size: 1.1rem; font-weight: 800;">0/4 Home</div>
+        </div>
+      </div>
+
+      <!-- Quick Rules Mini-Card -->
+      <div class="glass-panel card-panel">
+        <h3 style="font-size: 0.95rem; margin-bottom: 8px;">📖 Rules & Tips</h3>
+        <ul style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; padding-left: 18px;">
+          <li>Roll a <strong>6</strong> to move a piece out of your home base.</li>
+          <li>Rolling a 6 grants you an <strong>extra roll</strong>!</li>
+          <li>Landing on an opponent's piece captures it and sends it back home!</li>
+          <li>Safe tiles (marked with ⭐ stars) protect tokens from capture.</li>
+          <li>First player to navigate all 4 tokens to the center triumphs!</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Lobby & Matchmaking Modal -->
+  <div id="lobbyModal" class="modal-overlay">
+    <div class="glass-panel modal-card" style="position: relative;">
+      <button id="closeLobbyBtn" class="btn btn-secondary" style="position: absolute; top: 16px; right: 16px; padding: 4px 10px; font-size: 0.8rem;">✕ Close</button>
+      <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px;">🎲 Ludo Lobby</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        4-Player Table: Pick human count & fill remaining seats with intelligent bots!
+      </p>
+
+      <!-- Tabs -->
+      <div class="tab-group">
+        <button id="tabBots" class="tab-btn active">🤖 Solo vs 3 Bots</button>
+        <button id="tabCreate" class="tab-btn">⚡ Create Room</button>
+        <button id="tabJoin" class="tab-btn">🔗 Join Room</button>
+      </div>
+
+      <!-- Player Nickname -->
+      <div class="form-group">
+        <label for="nicknameInput">Your Nickname</label>
+        <input id="nicknameInput" type="text" class="form-input" placeholder="e.g. LuckyRoller" value="Player-1">
+      </div>
+
+      <!-- Solo Bots View -->
+      <div id="viewBots">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+          Jump straight into a classic match: You take Red, and 3 autonomous bots take Green, Yellow, and Blue!
+        </p>
+        <button id="startSoloBotsBtn" class="btn btn-primary" style="width: 100%; padding: 12px;">
+          🚀 Play vs 3 Bots Now
+        </button>
+      </div>
+
+      <!-- Create Room View -->
+      <div id="viewCreate" style="display: none;">
+        <div class="form-group">
+          <label for="humanCountSelect">Number of Human Players</label>
+          <select id="humanCountSelect" class="form-input" style="background:#0f172a;">
+            <option value="2">2 Humans (Remaining 2 will be Bots)</option>
+            <option value="3">3 Humans (Remaining 1 will be a Bot)</option>
+            <option value="4" selected>4 Humans (All Friends)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="roomNameInput">Room Code / Name</label>
+          <input id="roomNameInput" type="text" class="form-input" placeholder="e.g. ludo-fun">
+        </div>
+        <button id="hostRoomBtn" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 6px;">
+          ✨ Host P2P Room
+        </button>
+
+        <!-- Waiting area -->
+        <div id="hostWaitingArea" style="display:none; margin-top: 16px; padding: 14px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px dashed var(--accent-cyan); text-align: center;">
+          <div style="font-size: 0.9rem; font-weight: 700; color: #38bdf8; margin-bottom: 6px;" id="waitingCountText">
+            Connected: 1 / 4 Players
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Share room link with friends:</div>
+          <input id="shareLinkInput" type="text" readonly class="form-input" style="font-size: 0.8rem; text-align: center; color: #38bdf8;" onclick="this.select();">
+          <button id="startMultiplayerMatchBtn" class="btn btn-primary" style="width: 100%; margin-top: 10px; font-size: 0.85rem; padding: 9px;">
+            Start Match Now (Fill with Bots) 🚀
+          </button>
+        </div>
+      </div>
+
+      <!-- Join Room View -->
+      <div id="viewJoin" style="display: none;">
+        <div class="form-group">
+          <label for="joinRoomCodeInput">Target Room Code</label>
+          <input id="joinRoomCodeInput" type="text" class="form-input" placeholder="e.g. ludo-fun">
+        </div>
+        <button id="connectRoomBtn" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 6px;">
+          🔗 Connect to Room
+        </button>
+        <div id="joinStatusText" style="font-size: 0.85rem; margin-top: 12px; text-align: center; color: var(--accent-cyan);"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js?v=1.0"></script>
+</body>
+</html>

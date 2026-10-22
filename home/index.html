@@ -271,6 +271,34 @@
           Play Go (Baduk) ↗
         </a>
       </article>
+
+      <!-- Game 4: Ludo Royale -->
+      <article class="glass-panel game-card">
+        <div>
+          <div class="game-art-banner" style="background: linear-gradient(135deg, #b91c1c, #d97706, #15803d, #1d4ed8);">
+            <div class="game-badge-status">● Live P2P + AI</div>
+            <div style="font-size: 4rem;">🎲</div>
+          </div>
+          <div class="game-meta">
+            <span class="meta-tag">👥 2-4 Players</span>
+            <span class="meta-tag">🤖 Autonomous Bots</span>
+            <span class="meta-tag">⚡ Star Bases</span>
+            <span class="meta-tag">👑 Finish Runway</span>
+          </div>
+          <h2 class="game-title">Ludo Royale</h2>
+          <p class="game-desc">
+            The beloved classic cross-and-circle board game! Roll 6 to break out tokens, capture opponent pieces back to base, navigate star safe zones, and race all 4 tokens home. Play solo vs 3 smart bots or create a custom P2P room with chosen human slots!
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a href="../ludo/" class="btn btn-primary" style="flex: 2; background: linear-gradient(135deg, #f59e0b, #ef4444);">
+            Play Ludo →
+          </a>
+          <button id="ludoRulesBtn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;" onclick="openLudoRulesModal()">
+            📖 Rules
+          </button>
+        </div>
+      </article>
     </section>
   </main>
 
@@ -315,12 +343,57 @@
     </div>
   </div>
 
+  <!-- Ludo Rules Modal -->
+  <div id="ludoRulesModal" class="glass-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div class="glass-panel" style="width:100%; max-width:620px; max-height:85vh; overflow-y:auto; padding:28px; border-radius:var(--radius-lg); position:relative;">
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        🎲 How to Play: Ludo Royale
+      </h2>
+      
+      <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎯 Objective</h4>
+          <p>Navigate all 4 of your colored tokens around the 52-tile track and safely down your home runway into the center pocket. The first player to bring all 4 tokens home wins!</p>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🎲 Rolling & Moving</h4>
+          <ul style="padding-left:20px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+            <li>Roll a <strong>6</strong> to bring a token out of your yard onto your starting tile.</li>
+            <li>Rolling a <strong>6 gives you an immediate bonus roll</strong>!</li>
+            <li>Click your highlighted movable token to advance it by the dice value.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">⚔️ Capturing & Safe Zones</h4>
+          <p>Landing exactly on an opponent's token sends it <strong>back to their yard</strong> and grants you a bonus turn! However, <strong>Star tiles (⭐) and starting colored tiles are Safe Zones</strong> where pieces cannot be captured.</p>
+        </section>
+
+        <section>
+          <h4 style="color:#f8fafc; margin-bottom:4px;">🤖 Autonomous Bots & Multiplayer</h4>
+          <p>Play <strong>Solo vs 3 Bots</strong> right away, or host a <strong>P2P room</strong> with any human count (2, 3, or 4). Any seats not taken by humans are automatically played by smart tactical bots!</p>
+        </section>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #f59e0b, #ef4444);" onclick="closeLudoRulesModal()">
+        Got it! Close Rules
+      </button>
+    </div>
+  </div>
+
   <script>
     function openRulesModal() {
       document.getElementById('rulesModal').style.display = 'flex';
     }
     function closeRulesModal() {
       document.getElementById('rulesModal').style.display = 'none';
+    }
+    function openLudoRulesModal() {
+      document.getElementById('ludoRulesModal').style.display = 'flex';
+    }
+    function closeLudoRulesModal() {
+      document.getElementById('ludoRulesModal').style.display = 'none';
     }
   </script>
 
