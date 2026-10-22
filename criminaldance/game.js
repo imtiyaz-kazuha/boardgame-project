@@ -489,6 +489,8 @@ function setAnnouncement(text) {
 }
 
 // Human Play Card
+let pendingHumanCardPlayed = null;
+
 function playHumanCard(cardIndex) {
   const me = gameState.players[gameState.myPlayerIdx];
   const card = me.hand.splice(cardIndex, 1)[0];
@@ -496,6 +498,7 @@ function playHumanCard(cardIndex) {
 
   gameState.discardPile.push({ card, player: me });
   gameState.isFirstTurn = false;
+  pendingHumanCardPlayed = { card, cardIndex };
 
   updateCenterHub();
   renderMyHand();
@@ -505,6 +508,29 @@ function playHumanCard(cardIndex) {
   spawnCardVFX(seatCenter.x, seatCenter.y, '#38bdf8');
 
   executeCardEffect(me, card);
+}
+
+// Cancel action and return the played card back to hand
+function cancelHumanCardAction() {
+  if (!pendingHumanCardPlayed) return;
+
+  const me = gameState.players[gameState.myPlayerIdx];
+  // Pop the card from discard pile
+  const discarded = gameState.discardPile.pop();
+
+  // Put card back in hand
+  if (discarded && discarded.card) {
+    me.hand.splice(pendingHumanCardPlayed.cardIndex, 0, discarded.card);
+  }
+  pendingHumanCardPlayed = null;
+
+  // Restore center hub & table display
+  updateCenterHub();
+  renderMyHand();
+  renderTableLayout();
+
+  setAnnouncement("Action cancelled. Choose another card to play.");
+  showToast("Action Cancelled", "Card returned to your hand. Still your turn!", "↩️");
 }
 
 // Card Effects Dispatcher
@@ -643,6 +669,7 @@ function openAccuseSuspectModal(actionType) {
 
     btn.addEventListener('click', () => {
       modal.style.display = 'none';
+      pendingHumanCardPlayed = null; // Confirmed action!
       resolveAccusation(gameState.players[gameState.myPlayerIdx], p, actionType);
     });
 
@@ -654,6 +681,7 @@ function openAccuseSuspectModal(actionType) {
 
 document.getElementById('cancelTargetBtn').addEventListener('click', () => {
   document.getElementById('targetPickerModal').style.display = 'none';
+  cancelHumanCardAction();
 });
 
 // Resolve Accusations
@@ -709,6 +737,7 @@ function openWitnessModal() {
     btn.textContent = `${p.name} (${p.hand.length} cards)`;
     btn.addEventListener('click', () => {
       modal.style.display = 'none';
+      pendingHumanCardPlayed = null;
       const cardNames = p.hand.map(c => c.name).join(', ');
       alert(`👁️ WITNESS INTEL:\n\n${p.name}'s hand contains:\n• ${cardNames}`);
       nextTurn();
@@ -735,15 +764,26 @@ function executeInformationTrade() {
   }
 }
 
-function promptCardPassSelection(titleText, descText, onChosen) {
+function promptCardPassSelection(titleText, descText, onChosen, isCancelable = false) {
   const modal = document.getElementById('cardSelectModal');
   const title = document.getElementById('cardSelectTitle');
   const desc = document.getElementById('cardSelectDesc');
   const container = document.getElementById('cardSelectContainer');
+  const cancelBtn = document.getElementById('cancelCardSelectBtn');
   container.innerHTML = '';
 
   title.textContent = titleText;
   desc.textContent = descText;
+
+  if (isCancelable) {
+    cancelBtn.style.display = 'block';
+    cancelBtn.onclick = () => {
+      modal.style.display = 'none';
+      cancelHumanCardAction();
+    };
+  } else {
+    cancelBtn.style.display = 'none';
+  }
 
   const me = gameState.players[gameState.myPlayerIdx];
   me.hand.forEach((card, idx) => {
@@ -848,6 +888,7 @@ function openTradeSecretsModal() {
     btn.textContent = `${p.name} (${p.hand.length} cards)`;
     btn.addEventListener('click', () => {
       modal.style.display = 'none';
+      pendingHumanCardPlayed = null;
       promptCardPassSelection("Trade Secrets", `Choose 1 card to give to ${p.name}:`, (chosenIdx) => {
         const me = gameState.players[gameState.myPlayerIdx];
         const myGivenCard = me.hand.splice(chosenIdx, 1)[0];
@@ -862,7 +903,7 @@ function openTradeSecretsModal() {
         renderTableLayout();
         renderMyHand();
         nextTurn();
-      });
+      }, true);
     });
     grid.appendChild(btn);
   });
