@@ -487,8 +487,11 @@
   <div id="reactionBanner" class="reaction-prompt-bar">
     <div style="font-size:1.6rem;">⚡</div>
     <div>
-      <div id="reactionTitle" style="font-weight:800; font-size:0.95rem; color:#f59e0b;">Action in Progress</div>
-      <div id="reactionDesc" style="font-size:0.8rem; color:#cbd5e1;">Will anyone challenge or block?</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="reactionTitle" style="font-weight:800; font-size:0.95rem; color:#f59e0b;">Action in Progress</span>
+        <span id="reactionCountdownBadge" style="font-size:0.75rem; font-weight:800; background:rgba(239, 68, 68, 0.25); border:1px solid #ef4444; color:#f87171; padding:2px 8px; border-radius:999px;">⏳ 10s</span>
+      </div>
+      <div id="reactionDesc" style="font-size:0.82rem; color:#cbd5e1; margin-top:2px;">Will anyone challenge or block?</div>
     </div>
     <div style="display: flex; gap: 8px; margin-left: 12px;">
       <button id="btnChallenge" class="btn btn-primary" style="background:#dc2626; border-color:#ef4444; font-size:0.8rem; padding:6px 14px;">
@@ -727,6 +730,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.1"></script>
+  <script src="game.js?v=1.2"></script>
 </body>
 </html>

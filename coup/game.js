@@ -84,12 +84,13 @@ let coupState = {
   players: [], // Array of { id, name, isBot, coins, cards: [{...role, isAlive: true}] }
   winner: null,
   pendingAction: null, // { actorIdx, actionType, targetIdx, claimedRole, blockedBy: null, blockRole: null }
-  reactionState: null // { stage: 'action_challenge_or_block' | 'block_challenge', timeoutId }
+  reactionState: null // { stage: 'action_challenge_or_block' | 'block_challenge', timeoutId, intervalId, secondsRemaining }
 };
 
 let vfxCanvas, vfxCtx;
 let activeParticles = [];
 let peerEngine = null;
+let reactionCountdownTimer = null;
 
 // Audio Sound Synthesis using Web Audio API (Zero downloads / Zero latency)
 let audioCtx = null;
@@ -409,11 +410,21 @@ function executeActionPrompt(actorIdx, actionType, targetIdx = null) {
   startReactionPhase('action_challenge_or_block');
 }
 
-// Start Reaction Window (Challenge or Block)
+// Clear any active reaction countdown timer
+function clearReactionTimer() {
+  if (reactionCountdownTimer) {
+    clearInterval(reactionCountdownTimer);
+    reactionCountdownTimer = null;
+  }
+}
+
+// Start Reaction Window (Challenge or Block) with 10-Second Countdown & Specific Descriptions
 function startReactionPhase(stage) {
-  coupState.reactionState = { stage };
+  clearReactionTimer();
+  coupState.reactionState = { stage, secondsRemaining: 10 };
   const action = coupState.pendingAction;
   const actor = coupState.players[action.actorIdx];
+  const target = action.targetIdx !== null ? coupState.players[action.targetIdx] : null;
   const me = coupState.players[coupState.myPlayerIdx];
   const amIAlive = !isPlayerDead(me);
 
@@ -421,14 +432,35 @@ function startReactionPhase(stage) {
   const btnChallenge = document.getElementById('btnChallenge');
   const btnBlock = document.getElementById('btnBlock');
   const btnPass = document.getElementById('btnPass');
+  const countdownBadge = document.getElementById('reactionCountdownBadge');
 
-  // Human reaction banner visibility
+  // Human reaction banner setup
   if (amIAlive && action.actorIdx !== coupState.myPlayerIdx) {
     banner.style.display = 'flex';
 
     if (stage === 'action_challenge_or_block') {
-      document.getElementById('reactionTitle').textContent = `Reaction to ${actor.name}'s ${action.actionType.toUpperCase()}`;
       btnChallenge.style.display = action.canBeChallenged ? 'inline-flex' : 'none';
+
+      // Specific descriptive titles for actions
+      if (action.actionType === 'steal') {
+        document.getElementById('reactionTitle').textContent = `Steal Action (Captain)`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Captain to steal 2 coins from ${target ? target.name : 'you'}!`;
+      } else if (action.actionType === 'tax') {
+        document.getElementById('reactionTitle').textContent = `Tax Action (Duke)`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Duke to take 3 Tax coins from Treasury.`;
+      } else if (action.actionType === 'assassinate') {
+        document.getElementById('reactionTitle').textContent = `Assassination (Assassin)`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Assassin targeting ${target ? target.name : 'you'}!`;
+      } else if (action.actionType === 'foreign_aid') {
+        document.getElementById('reactionTitle').textContent = `Foreign Aid (+2 Coins)`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Foreign Aid. (Can be blocked by Duke)`;
+      } else if (action.actionType === 'exchange') {
+        document.getElementById('reactionTitle').textContent = `Exchange Action (Ambassador)`;
+        document.getElementById('reactionDesc').textContent = `${actor.name} claims Ambassador to exchange court cards.`;
+      } else {
+        document.getElementById('reactionTitle').textContent = `Action by ${actor.name}`;
+        document.getElementById('reactionDesc').textContent = `Will anyone challenge or block?`;
+      }
 
       // Can I block?
       let canIBlock = false;
@@ -439,16 +471,65 @@ function startReactionPhase(stage) {
       btnBlock.style.display = canIBlock ? 'inline-flex' : 'none';
     } else if (stage === 'block_challenge') {
       const blocker = coupState.players[action.blockedBy];
-      document.getElementById('reactionTitle').textContent = `${blocker.name} claims ${action.blockRole.name} to BLOCK!`;
       btnChallenge.style.display = 'inline-flex';
       btnBlock.style.display = 'none';
+
+      // Specific descriptive text for who blocked what:
+      if (action.actionType === 'steal') {
+        document.getElementById('reactionTitle').textContent = `Challenge Block of Stealing?`;
+        document.getElementById('reactionDesc').textContent = `${blocker.name} claims ${action.blockRole.name} to BLOCK ${actor.name} from stealing their coins!`;
+      } else if (action.actionType === 'assassinate') {
+        document.getElementById('reactionTitle').textContent = `Challenge Block of Assassination?`;
+        document.getElementById('reactionDesc').textContent = `${blocker.name} claims Contessa to DEFLECT ${actor.name}'s assassination!`;
+      } else if (action.actionType === 'foreign_aid') {
+        document.getElementById('reactionTitle').textContent = `Challenge Duke Block?`;
+        document.getElementById('reactionDesc').textContent = `${blocker.name} claims Duke to BLOCK ${actor.name}'s Foreign Aid!`;
+      } else {
+        document.getElementById('reactionTitle').textContent = `${blocker.name} claims ${action.blockRole.name} to BLOCK!`;
+        document.getElementById('reactionDesc').textContent = `Challenge ${blocker.name}'s claim of ${action.blockRole.name}?`;
+      }
     }
   } else {
     banner.style.display = 'none';
   }
 
-  // Trigger Autonomous Bots Reaction checks
+  // 10-Second Auto-Pass Countdown Timer
+  let seconds = 10;
+  countdownBadge.textContent = `⏳ ${seconds}s`;
+  countdownBadge.style.color = '#f87171';
+
+  reactionCountdownTimer = setInterval(() => {
+    seconds--;
+    countdownBadge.textContent = `⏳ ${seconds}s`;
+    if (seconds <= 3) {
+      countdownBadge.style.color = '#ef4444';
+      countdownBadge.style.animation = 'pulse 0.5s infinite';
+    }
+
+    if (seconds <= 0) {
+      clearReactionTimer();
+      banner.style.display = 'none';
+      onReactionTimeout(stage);
+    }
+  }, 1000);
+
+  // Trigger Autonomous Bots Reaction checks (they respond within 1-2s)
   evaluateBotReactions(stage);
+}
+
+// When 10-second reaction window expires without challenge:
+function onReactionTimeout(stage) {
+  if (!coupState.pendingAction) return;
+  const action = coupState.pendingAction;
+
+  if (stage === 'action_challenge_or_block') {
+    // If no one challenged or blocked within 10s, action succeeds!
+    applyActionEffect(action);
+  } else if (stage === 'block_challenge') {
+    // If no one challenged the block within 10s, block holds! Action is negated.
+    showToast("Block Unchallenged", `Block held! Action was prevented.`, "🛡️");
+    finishActionTurn();
+  }
 }
 
 // Autonomous Bot Reaction Evaluation
@@ -709,6 +790,7 @@ function onCardEliminated(playerIdx, deadCard, callback) {
 
 // Finish Current Turn & Pass to Next Living Player
 function finishActionTurn() {
+  clearReactionTimer();
   document.getElementById('reactionBanner').style.display = 'none';
   coupState.pendingAction = null;
   coupState.reactionState = null;
@@ -967,8 +1049,10 @@ function setupUIEventListeners() {
 
   // Challenge / Block Buttons
   document.getElementById('btnChallenge').addEventListener('click', () => {
+    clearReactionTimer();
     document.getElementById('reactionBanner').style.display = 'none';
     const action = coupState.pendingAction;
+    if (!action) return;
     if (coupState.reactionState.stage === 'action_challenge_or_block') {
       resolveChallenge(coupState.myPlayerIdx, action.actorIdx, action.claimedRole, () => {
         finishActionTurn();
@@ -985,8 +1069,10 @@ function setupUIEventListeners() {
   });
 
   document.getElementById('btnBlock').addEventListener('click', () => {
+    clearReactionTimer();
     document.getElementById('reactionBanner').style.display = 'none';
     const action = coupState.pendingAction;
+    if (!action) return;
     let blockRole = ROLES.DUKE;
     if (action.actionType === 'steal') blockRole = ROLES.CAPTAIN;
     if (action.actionType === 'assassinate') blockRole = ROLES.CONTESSA;
@@ -994,8 +1080,10 @@ function setupUIEventListeners() {
   });
 
   document.getElementById('btnPass').addEventListener('click', () => {
+    clearReactionTimer();
     document.getElementById('reactionBanner').style.display = 'none';
     const action = coupState.pendingAction;
+    if (!action) return;
     if (coupState.reactionState.stage === 'action_challenge_or_block') {
       if (action.blockedBy === null) {
         applyActionEffect(action);
