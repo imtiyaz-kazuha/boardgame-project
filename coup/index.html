@@ -361,24 +361,55 @@
     /* Challenge / Block Overlay Prompt */
     .reaction-prompt-bar {
       position: fixed;
-      top: 72px;
+      top: 64px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(15, 23, 42, 0.96);
       border: 2px solid #f59e0b;
       border-radius: 16px;
       padding: 12px 24px;
       display: none;
       align-items: center;
       gap: 16px;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 20px rgba(245, 158, 11, 0.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(245, 158, 11, 0.3);
       z-index: 1000;
       animation: promptSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     @keyframes promptSlide {
       from { transform: translate(-50%, -20px); opacity: 0; }
       to { transform: translate(-50%, 0); opacity: 1; }
+    }
+
+    /* Toast Notification Overlay */
+    .toast-overlay {
+      position: fixed;
+      top: 64px;
+      right: 16px;
+      z-index: 10005;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      max-width: 320px;
+    }
+    .toast-box {
+      pointer-events: auto;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      color: #fff;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      transform: translateY(-10px);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .toast-show {
+      transform: translateY(0);
+      opacity: 1;
     }
 
     /* Modals */
@@ -560,12 +591,28 @@
 
       /* Reaction prompt */
       .reaction-prompt-bar {
-        width: 90%;
-        max-width: 360px;
-        padding: 8px 14px;
+        width: 92%;
+        max-width: 350px;
+        top: 56px;
+        padding: 8px 12px;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         text-align: center;
+        border-radius: 12px;
+      }
+
+      /* Mobile Toast positioning so it never covers player hand or table center */
+      .toast-overlay {
+        top: 54px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 320px;
+      }
+      .toast-box {
+        padding: 8px 12px;
+        font-size: 0.8rem;
       }
     }
 
@@ -606,8 +653,8 @@
     </div>
   </header>
 
-  <!-- Notification Container -->
-  <div id="toastContainer" class="toast-overlay" style="position:fixed; bottom:180px; right:24px; z-index:10005;"></div>
+  <!-- Notification Container (Top Anchored, Never Obstructs Hand or Actions) -->
+  <div id="toastContainer" class="toast-overlay"></div>
 
   <!-- Interactive Challenge / Block Reaction Banner -->
   <div id="reactionBanner" class="reaction-prompt-bar">

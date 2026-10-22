@@ -1543,21 +1543,27 @@ function showToast(title, desc, icon = 'ℹ️') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
 
+  // Keep max 2 toasts on mobile so screen doesn't clutter
+  if (container.children.length >= 2) {
+    const oldest = container.firstChild;
+    oldest.remove();
+  }
+
   const toast = document.createElement('div');
   toast.className = 'toast-box';
   toast.innerHTML = `
-    <div style="font-size:1.3rem;">${icon}</div>
-    <div style="flex:1;">
-      <div style="font-weight:700; font-size:0.9rem;">${title}</div>
-      <div style="font-size:0.8rem; color:#94a3b8;">${desc}</div>
+    <div style="font-size:1.2rem; flex-shrink:0;">${icon}</div>
+    <div style="flex:1; min-width:0;">
+      <div style="font-weight:800; font-size:0.85rem; line-height:1.2;">${title}</div>
+      <div style="font-size:0.75rem; color:#94a3b8; line-height:1.3; margin-top:2px;">${desc}</div>
     </div>
   `;
   container.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('toast-show'));
   setTimeout(() => {
     toast.classList.remove('toast-show');
-    setTimeout(() => toast.remove(), 350);
-  }, 3200);
+    setTimeout(() => toast.remove(), 300);
+  }, 2400);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
