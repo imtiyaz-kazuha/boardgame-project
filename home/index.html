@@ -255,9 +255,14 @@
             Anime-themed Splendor engine builder! Collect gem mana, recruit legendary anime champions across 3 tiers, gain noble patronage, and race to 15 prestige points!
           </p>
         </div>
-        <a href="../splendor/" class="btn btn-accent" style="width: 100%;">
-          Play Realm of Legend →
-        </a>
+        <div style="display: flex; gap: 8px;">
+          <a href="../splendor/" class="btn btn-accent" style="flex: 2;">
+            Play Game →
+          </a>
+          <button class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;" onclick="openSplendorRulesModal()">
+            📖 Rules
+          </button>
+        </div>
       </article>
 
       <!-- Game 3: Go / Baduk -->
@@ -596,6 +601,122 @@
     </div>
   </div>
 
+  <!-- Realm of Legend (Splendor) Rules Modal -->
+  <div id="splendorRulesModal" class="glass-panel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div class="glass-panel" style="width:100%; max-width:680px; max-height:85vh; overflow-y:auto; padding:28px; border-radius:var(--radius-lg); position:relative; border: 2px solid rgba(245, 158, 11, 0.4);">
+      <h2 style="font-size:1.6rem; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg, #f59e0b, #ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        💎 How to Play: Realm of Legend (Splendor)
+      </h2>
+      
+      <div style="font-size:0.92rem; color:var(--text-muted); line-height:1.7; display:flex; flex-direction:column; gap:16px;">
+        <!-- Objective -->
+        <div style="padding:14px; border-radius:12px; background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.3);">
+          <h4 style="color:#fbbf24; font-size:1rem; margin-bottom:4px; font-weight:800;">🏆 The Victory Objective</h4>
+          <p style="color:#f1f5f9; margin:0;">
+            Be the first player to reach <strong>15 Prestige Points</strong> by recruiting anime champions and winning the favor of legendary Noble patrons!
+          </p>
+        </div>
+
+        <!-- 3 Actions -->
+        <div>
+          <h4 style="color:#a855f7; font-size:0.95rem; font-weight:800; text-transform:uppercase; margin-bottom:8px;">
+            On Your Turn (Choose EXACTLY 1 Action):
+          </h4>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:12px; border-radius:10px; background:rgba(2, 6, 23, 0.8); border:1px solid rgba(255,255,255,0.08);">
+              <strong style="color:#fff; display:block; margin-bottom:2px;">1. Take Gem Tokens from the Bank:</strong>
+              <p style="margin:0; font-size:0.88rem; color:#94a3b8;">
+                • Take <strong>3 different color gems</strong> (e.g. 1 Ruby, 1 Sapphire, 1 Emerald)<br/>
+                • OR take <strong>2 identical color gems</strong> (only permitted if 4+ tokens of that color remain in bank).<br/>
+                • <em>Note: Max token pouch hand limit is 10.</em>
+              </p>
+            </div>
+
+            <div style="padding:12px; border-radius:10px; background:rgba(2, 6, 23, 0.8); border:1px solid rgba(255,255,255,0.08);">
+              <strong style="color:#fff; display:block; margin-bottom:2px;">2. Recruit an Anime Champion:</strong>
+              <p style="margin:0; font-size:0.88rem; color:#94a3b8;">
+                Pay the required gem cost. Each recruited card gives you:
+                <br/>• <strong>Prestige Points</strong> towards the 15 required to win.
+                <br/>• <strong>A Permanent Gem Discount</strong>! Once recruited, this card permanently reduces all your future card purchases of that element!
+              </p>
+            </div>
+
+            <div style="padding:12px; border-radius:10px; background:rgba(2, 6, 23, 0.8); border:1px solid rgba(255,255,255,0.08);">
+              <strong style="color:#fff; display:block; margin-bottom:2px;">3. Reserve a Card:</strong>
+              <p style="margin:0; font-size:0.88rem; color:#94a3b8;">
+                Hold a card in your private hand (up to 3 held) to prevent your opponent from buying it, and claim <strong>1 Gold Wildcard</strong> token from the bank!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual Card Anatomy Breakdown -->
+        <div style="padding:16px; border-radius:14px; background:rgba(2, 6, 23, 0.95); border:1px solid rgba(255,255,255,0.12);">
+          <h4 style="color:#f59e0b; font-size:0.95rem; font-weight:800; text-transform:uppercase; margin-bottom:12px;">
+            🃏 Card Anatomy & Breakdown Example:
+          </h4>
+
+          <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
+            <!-- Real Sample Card Graphic -->
+            <div style="width:170px; border-radius:12px; overflow:hidden; border:2px solid #f59e0b; background:#0f172a; box-shadow:0 10px 25px rgba(0,0,0,0.6); flex-shrink:0;">
+              <!-- Header -->
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(0,0,0,0.85);">
+                <span style="font-size:0.8rem; font-weight:900; color:#fbbf24; background:rgba(245,158,11,0.2); padding:2px 6px; border-radius:4px; border:1px solid rgba(245,158,11,0.4);">
+                  🏆 4
+                </span>
+                <div style="width:22px; height:22px; border-radius:50%; background:#7e22ce; border:2px solid #fff; box-shadow:0 0 8px rgba(168,85,247,0.8); display:flex; align-items:center; justify-content:center;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:#fff;"></span>
+                </div>
+              </div>
+              <!-- Art -->
+              <div style="position:relative; width:100%; height:140px; background:#020617; overflow:hidden;">
+                <img src="https://s4.anilist.co/file/anilistcdn/character/large/b127691-9zqh1xpIubn7.png" alt="Satoru Gojo" style="width:100%; height:100%; object-fit:cover; object-position:top;" loading="lazy">
+                <div style="position:absolute; bottom:0; left:0; right:0; padding:6px; background:linear-gradient(to top, rgba(0,0,0,0.9), transparent);">
+                  <div style="font-size:0.78rem; font-weight:900; color:#fff;">Satoru Gojou</div>
+                  <div style="font-size:0.68rem; color:#94a3b8;">Jujutsu Kaisen</div>
+                </div>
+              </div>
+              <!-- Cost Footer -->
+              <div style="padding:6px 8px; background:#020617; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:4px;">
+                  <span style="width:20px; height:20px; border-radius:50%; background:#e11d48; font-size:0.7rem; font-weight:900; color:#fff; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.4);">3</span>
+                  <span style="width:20px; height:20px; border-radius:50%; background:#0284c7; font-size:0.7rem; font-weight:900; color:#fff; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.4);">3</span>
+                  <span style="width:20px; height:20px; border-radius:50%; background:#581c87; font-size:0.7rem; font-weight:900; color:#fff; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.4);">3</span>
+                </div>
+                <span style="font-size:0.7rem; font-weight:800; color:#fbbf24; background:rgba(245,158,11,0.2); padding:2px 6px; border-radius:4px;">Recruit</span>
+              </div>
+            </div>
+
+            <!-- Labels -->
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.85rem; flex:1; min-width:200px;">
+              <div>
+                <strong style="color:#fbbf24;">🏆 Top Left:</strong> <strong>4 Prestige Points</strong> earned towards the 15 required for victory.
+              </div>
+              <div>
+                <strong style="color:#c084fc;">💎 Top Right:</strong> <strong>Permanent Onyx Gem Discount</strong> (every future card requiring Onyx costs 1 less).
+              </div>
+              <div>
+                <strong style="color:#f43f5e;">🪙 Bottom Row:</strong> <strong>Gem Cost</strong> (Requires 3 Ruby, 3 Sapphire, and 3 Onyx to recruit).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Noble Patrons -->
+        <div style="padding:14px; border-radius:12px; background:rgba(79, 70, 229, 0.15); border:1px solid rgba(99, 102, 241, 0.3);">
+          <h4 style="color:#818cf8; font-size:1rem; margin-bottom:4px; font-weight:800;">👑 Noble Patrons (Worth 3 Points Each!)</h4>
+          <p style="color:#e2e8f0; margin:0; font-size:0.88rem;">
+            Noble patrons (like Gojo, Gear 5 Luffy, and Captain Levi) don't cost tokens. If your recruited cards provide the required bonus elements, the noble visits you automatically at the end of your turn!
+          </p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #f59e0b, #ec4899); font-weight:800;" onclick="closeSplendorRulesModal()">
+        Got it! Close Rules
+      </button>
+    </div>
+  </div>
+
   <script>
     function openRulesModal() {
       document.getElementById('rulesModal').style.display = 'flex';
@@ -626,6 +747,12 @@
     }
     function closeHeistRulesModal() {
       document.getElementById('heistRulesModal').style.display = 'none';
+    }
+    function openSplendorRulesModal() {
+      document.getElementById('splendorRulesModal').style.display = 'flex';
+    }
+    function closeSplendorRulesModal() {
+      document.getElementById('splendorRulesModal').style.display = 'none';
     }
   </script>
 
