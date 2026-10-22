@@ -195,27 +195,37 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: rgba(3, 7, 18, 0.94);
+      background: rgba(3, 7, 18, 0.96);
       backdrop-filter: blur(16px);
       border-top: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 12px 20px;
+      padding: 10px 0 14px; /* Edge-to-edge container to avoid left clipping */
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       z-index: 50;
       box-shadow: 0 -10px 30px rgba(0,0,0,0.7);
     }
 
     .hand-cards-row {
       display: flex;
-      gap: 14px;
-      justify-content: center;
+      gap: 12px;
+      justify-content: flex-start; /* Clean scroll from left to right */
       align-items: center;
       flex-wrap: nowrap;
       overflow-x: auto;
-      padding: 4px 10px;
-      max-width: 100%;
+      overflow-y: visible;
+      padding: 12px 24px 8px; /* Generous padding ensures first & last cards never cut off */
+      width: 100%;
+      box-sizing: border-box;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    /* Center when cards fit, scroll when they exceed screen */
+    @media (min-width: 600px) {
+      .hand-cards-row {
+        justify-content: center;
+      }
     }
 
     /* Full Card Component */
@@ -388,9 +398,9 @@
         width: 95px;
         height: 135px;
       }
-      .center-announcement {
-        font-size: 0.75rem;
-        max-width: 220px;
+      .hand-cards-row {
+        gap: 10px;
+        padding: 10px 20px 6px;
       }
     }
   </style>
@@ -647,6 +657,6 @@
 
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="game.js?v=1.6"></script>
+  <script src="game.js?v=1.7"></script>
 </body>
 </html>

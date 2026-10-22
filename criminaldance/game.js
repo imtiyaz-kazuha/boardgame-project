@@ -1085,7 +1085,19 @@ function openTradeSecretsModal() {
 function handleBotTurn() {
   if (gameState.gameOver) return;
   const bot = gameState.players[gameState.currentTurn];
-  if (!bot || bot.hand.length === 0) return;
+  if (!bot || bot.hand.length === 0) {
+    nextTurn();
+    return;
+  }
+
+  // Safety Watchdog: If bot gets stuck for more than 4 seconds, force turn advance
+  const currentTurnSnapshot = gameState.currentTurn;
+  setTimeout(() => {
+    if (!gameState.gameOver && gameState.currentTurn === currentTurnSnapshot && gameState.players[currentTurnSnapshot].isBot) {
+      console.warn("AI Watchdog triggered: Bot took too long, auto-advancing turn.");
+      nextTurn();
+    }
+  }, 4200);
 
   // 1. Mandatory FIRST_DISCOVERY
   const firstIdx = bot.hand.findIndex(c => c.id === 'first_discovery');
@@ -1243,13 +1255,36 @@ function botExecuteWitness(bot) {
 
 function botExecuteTradeSecrets(bot) {
   const suspects = gameState.players.filter((p, i) => i !== bot.id && p.hand.length > 0);
+  if (suspects.length === 0) {
+    nextTurn();
+    return;
+  }
   const partner = suspects[Math.floor(Math.random() * suspects.length)];
+
+  // If partner is human player, prompt human to pick a card to give to the bot
+  if (partner.id === gameState.myPlayerIdx) {
+    promptCardPassSelection("Trade Secrets", `Because ${bot.name} played Trade Secrets, choose 1 card to trade with them:`, (chosenIdx) => {
+      const me = gameState.players[gameState.myPlayerIdx];
+      const myCard = me.hand.splice(chosenIdx, 1)[0];
+      const botCardIdx = botSelectCardToPass(bot);
+      const botCard = bot.hand.splice(botCardIdx, 1)[0];
+
+      me.hand.push(botCard);
+      bot.hand.push(myCard);
+
+      playSound('pass_card');
+      showToast("Secrets Traded", `You and ${bot.name} swapped secret cards!`, "🤝");
+      renderTableLayout();
+      renderMyHand();
+      nextTurn();
+    }, false);
+    return;
+  }
+
+  // Both are bots: trade immediately
   const botCardIdx = botSelectCardToPass(bot);
   const botCard = bot.hand.splice(botCardIdx, 1)[0];
-
-  const partnerCardIdx = (partner.id === gameState.myPlayerIdx) 
-    ? 0 
-    : botSelectCardToPass(partner);
+  const partnerCardIdx = botSelectCardToPass(partner);
   const partnerCard = partner.hand.splice(partnerCardIdx, 1)[0];
 
   bot.hand.push(partnerCard);
