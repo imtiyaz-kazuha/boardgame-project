@@ -71,33 +71,72 @@
       display: flex;
       align-items: center;
       gap: 20px;
+      perspective: 800px;
     }
     .dice-cube {
-      width: 64px;
-      height: 64px;
-      border-radius: 14px;
-      background: #f8fafc;
+      width: 68px;
+      height: 68px;
+      border-radius: 16px;
+      background: radial-gradient(circle at 30% 30%, #ffffff, #e2e8f0 70%, #cbd5e1 100%);
       color: #0f172a;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2.2rem;
+      font-size: 2.5rem;
       font-weight: 800;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 0 8px rgba(0,0,0,0.1);
+      box-shadow: 
+        0 10px 25px rgba(0,0,0,0.45),
+        inset 0 2px 4px rgba(255,255,255,0.9),
+        inset 0 -3px 6px rgba(0,0,0,0.2),
+        0 0 0 1px rgba(255,255,255,0.4);
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      user-select: none;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+      transform-style: preserve-3d;
+      position: relative;
     }
     .dice-cube:hover {
-      transform: scale(1.08);
-      box-shadow: 0 10px 24px rgba(56, 189, 248, 0.5);
+      transform: translateY(-4px) scale(1.08) rotate(-3deg);
+      box-shadow: 
+        0 16px 32px rgba(56, 189, 248, 0.45),
+        inset 0 2px 4px rgba(255,255,255,0.9),
+        0 0 15px rgba(56, 189, 248, 0.5);
     }
     .dice-rolling {
-      animation: diceRollAnim 0.4s infinite linear;
+      animation: dice3DTumble 0.65s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      pointer-events: none;
     }
-    @keyframes diceRollAnim {
-      0% { transform: rotate(0deg) scale(0.95); }
-      50% { transform: rotate(180deg) scale(1.1); }
-      100% { transform: rotate(360deg) scale(0.95); }
+    @keyframes dice3DTumble {
+      0% {
+        transform: translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      }
+      25% {
+        transform: translateY(-38px) rotateX(240deg) rotateY(180deg) rotateZ(45deg) scale(1.18);
+        box-shadow: 0 28px 45px rgba(245, 158, 11, 0.55), 0 0 25px rgba(245, 158, 11, 0.4);
+      }
+      50% {
+        transform: translateY(-20px) rotateX(480deg) rotateY(360deg) rotateZ(-30deg) scale(1.12);
+        box-shadow: 0 22px 35px rgba(239, 68, 68, 0.5);
+      }
+      75% {
+        transform: translateY(-5px) rotateX(660deg) rotateY(500deg) rotateZ(15deg) scale(1.05);
+      }
+      90% {
+        transform: translateY(-2px) rotateX(720deg) rotateY(540deg) rotateZ(-5deg) scale(0.98);
+      }
+      100% {
+        transform: translateY(0) rotateX(720deg) rotateY(540deg) rotateZ(0deg) scale(1);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+      }
+    }
+    .dice-landed-pop {
+      animation: diceLandedPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes diceLandedPop {
+      0% { transform: scale(0.85); }
+      50% { transform: scale(1.22); filter: drop-shadow(0 0 12px #38bdf8); }
+      100% { transform: scale(1); }
     }
 
     /* Sidebar Players */
@@ -401,6 +440,6 @@
     </div>
   </div>
 
-  <script src="game.js?v=1.0"></script>
+  <script src="game.js?v=1.1"></script>
 </body>
 </html>
