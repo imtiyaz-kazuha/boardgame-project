@@ -227,25 +227,48 @@ function handleP2PMessage(msg) {
   }
 }
 
+// Category Mapping for The Trivia API and OpenTDB
+const CATEGORY_MAP = {
+  cars: { ttaTag: 'cars', opentdbCat: 28 },
+  geography: { ttaCat: 'geography', opentdbCat: 22 },
+  history: { ttaCat: 'history', opentdbCat: 23 },
+  science: { ttaCat: 'science', opentdbCat: 17 },
+  computers: { ttaTag: 'technology', opentdbCat: 18 },
+  video_games: { ttaTag: 'video_games', opentdbCat: 15 },
+  anime: { ttaTag: 'anime', opentdbCat: 31 },
+  mythology: { ttaTag: 'mythology', opentdbCat: 20 },
+  film_and_tv: { ttaCat: 'film_and_tv', opentdbCat: 11 },
+  music: { ttaCat: 'music', opentdbCat: 12 },
+  sport_and_leisure: { ttaCat: 'sport_and_leisure', opentdbCat: 21 },
+  food_and_drink: { ttaCat: 'food_and_drink', opentdbCat: 9 },
+  arts_and_literature: { ttaCat: 'arts_and_literature', opentdbCat: 10 },
+  society_and_culture: { ttaCat: 'society_and_culture', opentdbCat: 24 },
+  animals: { ttaTag: 'animals', opentdbCat: 27 }
+};
+
 // -------------------------------------------------------------
 // Fetch Questions from The Trivia API / OpenTDB with Curated Fallbacks
 // -------------------------------------------------------------
 async function fetchMatchQuestions(count, genre) {
   let fetchedQuestions = [];
+  const catConfig = CATEGORY_MAP[genre];
 
+  // 1. Try The Trivia API v2
   try {
     let url = `https://the-trivia-api.com/v2/questions?limit=${count}`;
-    if (genre === 'cars') {
-      url += `&tags=cars`;
-    } else if (genre !== 'all') {
-      url += `&categories=${genre}`;
+    if (catConfig) {
+      if (catConfig.ttaTag) {
+        url += `&tags=${catConfig.ttaTag}`;
+      } else if (catConfig.ttaCat) {
+        url += `&categories=${catConfig.ttaCat}`;
+      }
     }
 
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       fetchedQuestions = data.map(q => ({
-        category: q.category.replace(/_/g, ' '),
+        category: (q.category || genre).replace(/_/g, ' '),
         question: q.question.text,
         correctAnswer: q.correctAnswer,
         incorrectAnswers: q.incorrectAnswers
@@ -255,15 +278,18 @@ async function fetchMatchQuestions(count, genre) {
     console.warn("Live Trivia API error, switching to OpenTDB fallback:", err);
   }
 
-  // OpenTDB fallback if count is not satisfied
+  // 2. OpenTDB fallback if count is not satisfied or category needs more volume
   if (fetchedQuestions.length < count) {
     try {
-      const openTdbUrl = genre === 'cars' 
-        ? `https://opentdb.com/api.php?amount=${count}&category=28`
-        : `https://opentdb.com/api.php?amount=${count}`;
+      const needed = count - fetchedQuestions.length;
+      let openTdbUrl = `https://opentdb.com/api.php?amount=${needed}`;
+      if (catConfig && catConfig.opentdbCat) {
+        openTdbUrl += `&category=${catConfig.opentdbCat}`;
+      }
+
       const res2 = await fetch(openTdbUrl);
       const data2 = await res2.json();
-      if (data2.results) {
+      if (data2.results && data2.results.length) {
         const decoded = data2.results.map(q => ({
           category: decodeHtml(q.category),
           question: decodeHtml(q.question),
@@ -277,7 +303,7 @@ async function fetchMatchQuestions(count, genre) {
     }
   }
 
-  // Final fallback to curated deck
+  // 3. Final safety fallback to curated deck for cars or general fill
   if (genre === 'cars' || fetchedQuestions.length < count) {
     fetchedQuestions = [...fetchedQuestions, ...CURATED_CARS_QUESTIONS];
   }
