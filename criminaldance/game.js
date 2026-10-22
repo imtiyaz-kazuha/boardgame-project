@@ -124,12 +124,25 @@ function spawnCardVFX(x, y, color = '#38bdf8') {
   }
 }
 
-// Smooth Flying Card Animation with Trail Sparks
-function animateCardToCenter(card, startRect, color = '#38bdf8', callback) {
+// Clean & Reliable Flying Card Animation
+function animateCardToCenter(card, startRect, callback) {
   const centerHub = document.getElementById('centerDiscard');
-  const hubRect = centerHub.getBoundingClientRect();
-  const targetX = hubRect.left || (window.innerWidth / 2 - 62);
-  const targetY = hubRect.top || (window.innerHeight * 0.42 - 87);
+  let targetX = window.innerWidth / 2 - 62;
+  let targetY = window.innerHeight * 0.42 - 87;
+
+  if (centerHub) {
+    const hubRect = centerHub.getBoundingClientRect();
+    if (hubRect.width > 0 && hubRect.height > 0) {
+      targetX = hubRect.left;
+      targetY = hubRect.top;
+    }
+  }
+
+  // Fallback origin if startRect is invalid
+  const originX = (startRect && startRect.left) ? startRect.left : (window.innerWidth / 2 - 62);
+  const originY = (startRect && startRect.top) ? startRect.top : (window.innerHeight - 180);
+  const originW = (startRect && startRect.width) ? startRect.width : 125;
+  const originH = (startRect && startRect.height) ? startRect.height : 175;
 
   const clone = document.createElement('div');
   clone.className = `flying-card-clone ${card.cardClass || ''}`;
@@ -139,19 +152,15 @@ function animateCardToCenter(card, startRect, color = '#38bdf8', callback) {
       <div class="card-title-text">${card.name}</div>
     </div>
   `;
-  clone.style.left = `${startRect.left}px`;
-  clone.style.top = `${startRect.top}px`;
-  clone.style.width = `${startRect.width}px`;
-  clone.style.height = `${startRect.height}px`;
-  clone.style.transform = `rotate(${(Math.random() - 0.5) * 20}deg) scale(1.05)`;
+  clone.style.left = `${originX}px`;
+  clone.style.top = `${originY}px`;
+  clone.style.width = `${originW}px`;
+  clone.style.height = `${originH}px`;
+  clone.style.opacity = '1';
+  clone.style.transform = `rotate(${(Math.random() - 0.5) * 14}deg) scale(1.05)`;
   document.body.appendChild(clone);
 
-  // Spark trail generator during flight
-  let trailInterval = setInterval(() => {
-    const curRect = clone.getBoundingClientRect();
-    spawnCardVFX(curRect.left + curRect.width / 2, curRect.top + curRect.height / 2, color);
-  }, 45);
-
+  // Trigger smooth glide to center on next frame
   requestAnimationFrame(() => {
     clone.style.left = `${targetX}px`;
     clone.style.top = `${targetY}px`;
@@ -160,13 +169,11 @@ function animateCardToCenter(card, startRect, color = '#38bdf8', callback) {
     clone.style.transform = `rotate(0deg) scale(1)`;
   });
 
+  // End animation cleanly after transition
   setTimeout(() => {
-    clearInterval(trailInterval);
-    spawnCardVFX(targetX + 62, targetY + 87, color);
-    spawnCardVFX(targetX + 62, targetY + 87, '#f59e0b');
     clone.remove();
     if (callback) callback();
-  }, 560);
+  }, 520);
 }
 
 function spawnVictoryConfetti() {
@@ -575,8 +582,8 @@ function playHumanCard(cardIndex, cardElement) {
 
   renderMyHand();
 
-  // Smooth flying animation with trail sparks to center discard!
-  animateCardToCenter(card, startRect, '#38bdf8', () => {
+  // Smooth flying animation to center discard!
+  animateCardToCenter(card, startRect, () => {
     gameState.discardPile.push({ card, player: me });
     gameState.isFirstTurn = false;
     pendingHumanCardPlayed = { card, cardIndex };
@@ -1087,7 +1094,7 @@ function handleBotTurn() {
     const seatCenter = getSeatCenter(bot.id);
     const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
     playSound('card_play');
-    animateCardToCenter(card, botRect, '#38bdf8', () => {
+    animateCardToCenter(card, botRect, () => {
       gameState.discardPile.push({ card, player: bot });
       gameState.isFirstTurn = false;
       updateCenterHub();
@@ -1103,7 +1110,7 @@ function handleBotTurn() {
     const seatCenter = getSeatCenter(bot.id);
     const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
     playSound('card_play');
-    animateCardToCenter(card, botRect, '#ef4444', () => {
+    animateCardToCenter(card, botRect, () => {
       gameState.discardPile.push({ card, player: bot });
       updateCenterHub();
       renderTableLayout();
@@ -1121,7 +1128,7 @@ function handleBotTurn() {
       const seatCenter = getSeatCenter(bot.id);
       const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
       playSound('card_play');
-      animateCardToCenter(card, botRect, '#38bdf8', () => {
+      animateCardToCenter(card, botRect, () => {
         gameState.discardPile.push({ card, player: bot });
         updateCenterHub();
         renderTableLayout();
@@ -1138,7 +1145,7 @@ function handleBotTurn() {
     const seatCenter = getSeatCenter(bot.id);
     const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
     playSound('card_play');
-    animateCardToCenter(card, botRect, '#f59e0b', () => {
+    animateCardToCenter(card, botRect, () => {
       gameState.discardPile.push({ card, player: bot });
       updateCenterHub();
       renderTableLayout();
@@ -1154,7 +1161,7 @@ function handleBotTurn() {
     const seatCenter = getSeatCenter(bot.id);
     const botRect = { left: seatCenter.x - 45, top: seatCenter.y - 30, width: 90, height: 60 };
     playSound('card_play');
-    animateCardToCenter(card, botRect, '#38bdf8', () => {
+    animateCardToCenter(card, botRect, () => {
       gameState.discardPile.push({ card, player: bot });
       updateCenterHub();
       renderTableLayout();
@@ -1163,7 +1170,7 @@ function handleBotTurn() {
     return;
   }
 
-  // 5. Play other cards (avoid playing Criminal early!)
+  // 6. Play other cards (avoid playing Criminal early!)
   const playableIndices = [];
   bot.hand.forEach((c, idx) => {
     if (c.id !== 'criminal') playableIndices.push(idx);
@@ -1181,7 +1188,7 @@ function handleBotTurn() {
   };
 
   playSound('card_play');
-  animateCardToCenter(card, botRect, '#f43f5e', () => {
+  animateCardToCenter(card, botRect, () => {
     gameState.discardPile.push({ card, player: bot });
     updateCenterHub();
     renderTableLayout();
