@@ -44,33 +44,6 @@ const US_CITIES = [
   { id: 'boston', name: 'Boston', state: 'MA', lat: 42.3601, lng: -71.0589, hasAirport: false }
 ];
 
-// State Total Shared Capacity Pools (Combined for Train, Road, and Flight!):
-// Mega Hubs: 4 total slots
-// Medium States: 3 total slots
-// Regional States: 2 total slots
-const STATE_CAPACITIES = {
-  'CA': { totalSlots: 4, name: 'California (Mega Hub)' },
-  'TX': { totalSlots: 4, name: 'Texas (Mega Hub)' },
-  'NY': { totalSlots: 4, name: 'New York (Mega Hub)' },
-  'IL': { totalSlots: 4, name: 'Illinois (Mega Hub)' },
-
-  'WA': { totalSlots: 3, name: 'Washington' },
-  'GA': { totalSlots: 3, name: 'Georgia' },
-  'FL': { totalSlots: 3, name: 'Florida' },
-  'CO': { totalSlots: 3, name: 'Colorado' },
-  'DC': { totalSlots: 3, name: 'Washington D.C.' },
-
-  'NV': { totalSlots: 2, name: 'Nevada' },
-  'MN': { totalSlots: 2, name: 'Minnesota' },
-  'AZ': { totalSlots: 2, name: 'Arizona' },
-  'UT': { totalSlots: 2, name: 'Utah' },
-  'MO': { totalSlots: 2, name: 'Missouri' },
-  'MI': { totalSlots: 2, name: 'Michigan' },
-  'LA': { totalSlots: 2, name: 'Louisiana' },
-  'TN': { totalSlots: 2, name: 'Tennessee' },
-  'MA': { totalSlots: 2, name: 'Massachusetts' }
-};
-
 // All distinct US states represented in the game
 const TOTAL_GAME_STATES = Array.from(new Set(US_CITIES.map(c => c.state)));
 
@@ -155,7 +128,6 @@ let state = {
   p1Routes: [],
   p2Routes: [],
   claimed: {}, // routeId -> { player: 1|2, usedMode: 'train'|'road'|'flight'|'joker' }
-  stateSlotClaims: {}, // stateAbbr -> array of { player, mode }
   p1Tickets: { train: 3, road: 3, flight: 2, joker: 1 },
   p2Tickets: { train: 3, road: 3, flight: 2, joker: 1 },
   activeMissions: [], // Shared public quest board
@@ -257,29 +229,10 @@ function initMap() {
 
 function renderCityPins() {
   US_CITIES.forEach(city => {
-    const totalSlots = (STATE_CAPACITIES[city.state] && STATE_CAPACITIES[city.state].totalSlots) || 2;
-    const p1Slots = (state.stateSlotClaims[city.state] || []).filter(c => c.player === 1).length;
-    const p2Slots = (state.stateSlotClaims[city.state] || []).filter(c => c.player === 2).length;
-    const totalUsed = p1Slots + p2Slots;
-    const isFull = totalUsed >= totalSlots;
-
-    // Build pips HTML
-    let pipsHtml = '';
-    for (let i = 0; i < totalSlots; i++) {
-      let pipClass = 'slot-pip';
-      if (i < p1Slots) {
-        pipClass += ' pip-p1';
-      } else if (i < p1Slots + p2Slots) {
-        pipClass += ' pip-p2';
-      }
-      pipsHtml += `<div class="${pipClass}"></div>`;
-    }
-
     const iconHtml = `
-      <div class="pin-circle ${city.hasAirport ? 'has-airport' : ''} ${isFull ? 'pin-full' : ''}"></div>
+      <div class="pin-circle ${city.hasAirport ? 'has-airport' : ''}"></div>
       <div class="pin-label">
         <span>${city.name} (${city.state})${city.hasAirport ? ' ✈️' : ''}</span>
-        <div class="pin-pips-row">${pipsHtml}</div>
       </div>
     `;
 
@@ -287,54 +240,34 @@ function renderCityPins() {
       const icon = L.divIcon({
         className: 'city-pin',
         html: iconHtml,
-        iconSize: [90, 42],
-        iconAnchor: [45, 8]
+        iconSize: [80, 36],
+        iconAnchor: [40, 8]
       });
       markers[city.id].setIcon(icon);
       markers[city.id].setPopupContent(`
         <b>${city.name}, ${city.state}</b><br>
-        Capacity: <b>${totalUsed} / ${totalSlots} Slots Used</b><br>
-        Status: <b>${isFull ? '🔒 FULL' : `${totalSlots - totalUsed} Open Slots`}</b><br>
-        ${city.hasAirport ? '✈️ Major Air Hub' : '🚂 Overland Hub'}
+        ${city.hasAirport ? '✈️ Major Air Hub (Supports Flights)' : '🚂 Overland Hub (Train / Road)'}
       `);
     } else {
       const icon = L.divIcon({
         className: 'city-pin',
         html: iconHtml,
-        iconSize: [90, 42],
-        iconAnchor: [45, 8]
+        iconSize: [80, 36],
+        iconAnchor: [40, 8]
       });
       const marker = L.marker([city.lat, city.lng], { icon }).addTo(map);
       marker.bindPopup(`
         <b>${city.name}, ${city.state}</b><br>
-        Capacity: <b>${totalUsed} / ${totalSlots} Slots Used</b><br>
-        Status: <b>${isFull ? '🔒 FULL' : `${totalSlots - totalUsed} Open Slots`}</b><br>
-        ${city.hasAirport ? '✈️ Major Air Hub' : '🚂 Overland Hub'}
+        ${city.hasAirport ? '✈️ Major Air Hub (Supports Flights)' : '🚂 Overland Hub (Train / Road)'}
       `);
       markers[city.id] = marker;
     }
   });
 }
 
-// Check player ticket affordability and single shared state capacity rule
+// Check player ticket affordability
 function getAffordableMode(playerNum, route) {
   const tickets = playerNum === 1 ? state.p1Tickets : state.p2Tickets;
-
-  const cityMap = {};
-  US_CITIES.forEach(c => cityMap[c.id] = c);
-  const stateFrom = cityMap[route.from].state;
-  const stateTo = cityMap[route.to].state;
-
-  const capFrom = (STATE_CAPACITIES[stateFrom] && STATE_CAPACITIES[stateFrom].totalSlots) || 2;
-  const capTo = (STATE_CAPACITIES[stateTo] && STATE_CAPACITIES[stateTo].totalSlots) || 2;
-
-  const usedFrom = (state.stateSlotClaims[stateFrom] || []).length;
-  const usedTo = (state.stateSlotClaims[stateTo] || []).length;
-
-  // If either state's shared capacity pool is full, no more connections can enter/exit!
-  if (usedFrom >= capFrom || usedTo >= capTo) {
-    return null;
-  }
 
   for (const mode of route.modes) {
     const regular = tickets[mode] || 0;
@@ -400,14 +333,6 @@ function handleRouteClick(routeId) {
   const player = state.currentTurn;
   const tickets = player === 1 ? state.p1Tickets : state.p2Tickets;
 
-  // Check state capacity limits
-  const capFrom = (STATE_CAPACITIES[from.state] && STATE_CAPACITIES[from.state].totalSlots) || 2;
-  const capTo = (STATE_CAPACITIES[to.state] && STATE_CAPACITIES[to.state].totalSlots) || 2;
-  const usedFrom = (state.stateSlotClaims[from.state] || []).length;
-  const usedTo = (state.stateSlotClaims[to.state] || []).length;
-
-  const isFull = usedFrom >= capFrom || usedTo >= capTo;
-
   // Open modal
   const claimModal = document.getElementById('claimModal');
   const title = document.getElementById('claimRouteTitle');
@@ -418,12 +343,7 @@ function handleRouteClick(routeId) {
   title.textContent = `${from.name} (${from.state}) ↔ ${to.name} (${to.state})`;
   sub.textContent = `Distance: ${route.km.toLocaleString()} km • Required Tickets: ${route.cost}x`;
   options.innerHTML = '';
-
-  if (isFull) {
-    notice.textContent = `⚠️ Capacity limit reached in ${usedFrom >= capFrom ? from.state : to.state}! No more routes can connect here.`;
-  } else {
-    notice.textContent = '';
-  }
+  notice.textContent = '';
 
   route.modes.forEach(mode => {
     const regular = tickets[mode] || 0;
@@ -437,8 +357,8 @@ function handleRouteClick(routeId) {
 
     const btn = document.createElement('button');
     btn.className = 'mode-select-btn';
-    btn.disabled = isFull || !canPay;
-    btn.style.opacity = (isFull || !canPay) ? '0.45' : '1';
+    btn.disabled = !canPay;
+    btn.style.opacity = !canPay ? '0.45' : '1';
 
     let costDesc = `${route.cost}x ${mode}`;
     if (jokersNeeded > 0) {
@@ -468,21 +388,12 @@ function confirmClaimRoute(routeId, chosenMode, useJokers) {
   const cityMap = {};
   US_CITIES.forEach(c => cityMap[c.id] = c);
 
-  const stateFrom = cityMap[route.from].state;
-  const stateTo = cityMap[route.to].state;
-
   // Deduct
   const regularSpent = route.cost - useJokers;
   tickets[chosenMode] -= regularSpent;
   if (useJokers > 0) {
     tickets.joker -= useJokers;
   }
-
-  // Record slot claims
-  if (!state.stateSlotClaims[stateFrom]) state.stateSlotClaims[stateFrom] = [];
-  if (!state.stateSlotClaims[stateTo]) state.stateSlotClaims[stateTo] = [];
-  state.stateSlotClaims[stateFrom].push({ player, mode: chosenMode });
-  state.stateSlotClaims[stateTo].push({ player, mode: chosenMode });
 
   // Claim
   state.claimed[routeId] = { player, mode: chosenMode };
@@ -792,11 +703,6 @@ function playAITurn() {
     tickets[match.mode] -= regularSpent;
     if (match.useJokers > 0) tickets.joker -= match.useJokers;
 
-    if (!state.stateSlotClaims[stateFrom]) state.stateSlotClaims[stateFrom] = [];
-    if (!state.stateSlotClaims[stateTo]) state.stateSlotClaims[stateTo] = [];
-    state.stateSlotClaims[stateFrom].push({ player: 2, mode: match.mode });
-    state.stateSlotClaims[stateTo].push({ player: 2, mode: match.mode });
-
     state.claimed[route.id] = { player: 2, mode: match.mode };
     state.p2Routes.push(route.id);
     state.p2Score += Math.round(route.km / 80);
@@ -1038,7 +944,6 @@ function resetGameSession() {
   state.p2TotalKm = 0;
   state.p1StatesCount = 0;
   state.p2StatesCount = 0;
-  state.stateSlotClaims = {}; // stateAbbr -> array of { player, mode }
   state.currentTurn = 1;
   state.gameOver = false;
   state.p1Tickets = { train: 3, road: 3, flight: 2, joker: 1 };
