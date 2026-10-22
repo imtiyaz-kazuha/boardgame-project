@@ -1351,6 +1351,25 @@ function endGame(winningTeam, keyPlayer, reason = '') {
 
   modal.style.display = 'flex';
   spawnVictoryConfetti();
+
+  // Send stylized Discord match report
+  const winningRoster = gameState.players
+    .filter(p => winningTeam === 'criminal' ? (p.id === keyPlayer.id || p.isAccomplice) : (!p.isAccomplice && !p.hand.some(c => c.id === 'criminal')))
+    .map(p => p.name)
+    .join(', ');
+
+  sendDiscordMatchReport({
+    gameName: "Dancing Criminal",
+    gameIcon: winningTeam === 'criminal' ? "🦹" : "🕵️",
+    color: winningTeam === 'criminal' ? 0xef4444 : 0x38bdf8,
+    winner: `${winningTeam === 'criminal' ? '🦹 Criminal Syndicate' : '🕵️ Detective Squad'} (${keyPlayer.name})`,
+    summary: reason || (winningTeam === 'criminal' ? `${keyPlayer.name} slipped past detectives and escaped with the Criminal card!` : `${keyPlayer.name} cracked the case and arrested the Criminal!`),
+    fields: [
+      { name: "🏆 Victorious Squad", value: winningRoster || keyPlayer.name, inline: false },
+      { name: "🃏 Outcome", value: winningTeam === 'criminal' ? "Criminal Escaped Uncaught" : "Criminal Apprehended & Arrested", inline: true },
+      { name: "👥 Table Size", value: `${gameState.players.length} Players`, inline: true }
+    ]
+  });
 }
 
 document.getElementById('vicPlayAgainBtn').addEventListener('click', () => {

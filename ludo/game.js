@@ -1029,6 +1029,21 @@ function showLeaderboardModal(winnerIdx) {
   });
 
   modal.style.display = 'flex';
+
+  // Send rich Discord report
+  sendDiscordMatchReport({
+    gameName: "Ludo Royale",
+    gameIcon: "🎲",
+    color: 0xf59e0b,
+    winner: winner.name,
+    summary: `${winner.name} successfully escorted all 4 tokens home into the center pocket!`,
+    fields: [
+      { name: "🥇 1st Place", value: `${rankedPlayers[0].player.name} (${rankedPlayers[0].meta.name})`, inline: true },
+      { name: "🥈 2nd Place", value: `${rankedPlayers[1].player.name} (${rankedPlayers[1].meta.name})`, inline: true },
+      { name: "🥉 3rd Place", value: `${rankedPlayers[2].player.name} (${rankedPlayers[2].meta.name})`, inline: true },
+      { name: "🎖️ 4th Place", value: `${rankedPlayers[3].player.name} (${rankedPlayers[3].meta.name})`, inline: true }
+    ]
+  });
 }
 
 // Update Scoreboard UI

@@ -1035,6 +1035,20 @@ function checkVictory() {
     document.getElementById('victoryWinnerSubtitle').textContent = `With unmatched cunning and deception, ${winner.name} eliminated all other syndicate agents!`;
     modal.style.display = 'flex';
     spawnVictoryConfetti();
+
+    // Send stylized Discord match report
+    sendDiscordMatchReport({
+      gameName: "Coup: Syndicate",
+      gameIcon: "👑",
+      color: 0xa855f7,
+      winner: winner.name,
+      summary: `${winner.name} eliminated all other syndicate agents through bluffing, assassination, and coups!`,
+      fields: [
+        { name: "🪙 Winner Treasury", value: `${winner.coins} coins remaining`, inline: true },
+        { name: "👥 Agents Eliminated", value: `${coupState.players.length - 1} Rivals Defeated`, inline: true }
+      ]
+    });
+
     return true;
   }
   return false;

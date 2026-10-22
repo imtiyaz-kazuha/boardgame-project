@@ -968,6 +968,20 @@ function endGame(winnerNum, reason) {
 
   modal.style.display = 'flex';
   spawnVictoryConfetti();
+
+  // Send stylized Discord match report
+  sendDiscordMatchReport({
+    gameName: "Connect 4 America",
+    gameIcon: "🚂",
+    color: grandWinner === state.p1Name ? 0x38bdf8 : 0xf43f5e,
+    winner: isTie ? "Draw / Tie" : grandWinner,
+    summary: `${grandWinner} triumphed by score! (${reason})`,
+    fields: [
+      { name: `🔵 ${state.p1Name}`, value: `${p1Final} pts • ${state.p1StatesCount}/17 States (${state.p1TotalKm.toLocaleString()} km)`, inline: true },
+      { name: `🔴 ${state.p2Name}`, value: `${p2Final} pts • ${state.p2StatesCount}/17 States (${state.p2TotalKm.toLocaleString()} km)`, inline: true },
+      { name: "🗺️ Final Status", value: `Network Capacity Reached (${reason})`, inline: false }
+    ]
+  });
 }
 
 // Play Again button inside victory modal

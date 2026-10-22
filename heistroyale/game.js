@@ -531,6 +531,25 @@ function endHeistGame() {
   });
 
   modal.style.display = 'flex';
+
+  // Send Discord Match Report
+  if (typeof sendDiscordMatchReport === 'function') {
+    const medals = ['🥇', '🥈', '🥉', '🎖️', '🎖️'];
+    const fields = gameState.players.map((p, idx) => ({
+      name: `${medals[idx] || '🎖️'} Rank #${idx + 1}: ${p.name}`,
+      value: `**Net Worth: ${p.finalScore} Gold**\n🏦 ${p.bankedGold} Banked | 💰 ${p.looseGold} Loose | 💥 ${p.heat} Heat`,
+      inline: true
+    }));
+
+    sendDiscordMatchReport({
+      gameName: 'Heist Royale: Casino Vault',
+      gameIcon: '🎰',
+      color: 0xfbbf24,
+      winner: grandWinner.name,
+      summary: `**${grandWinner.name}** cracked the casino vault and escaped with **${grandWinner.finalScore} Net Worth**!`,
+      fields: fields
+    });
+  }
 }
 
 document.getElementById('vicPlayAgainBtn').addEventListener('click', () => {
