@@ -55,6 +55,14 @@ const YARD_COORDS = {
   blue: [[2, 11], [3.5, 11], [2, 12.5], [3.5, 12.5]]
 };
 
+// Home Center Final Target Coordinates (4 slots in central triangle pocket)
+const HOME_CENTER_OFFSETS = {
+  red: [-18, 0],
+  green: [0, -18],
+  yellow: [18, 0],
+  blue: [0, 18]
+};
+
 // Safe Tiles where pieces cannot be knocked out
 const SAFE_TILES = [0, 8, 13, 21, 26, 34, 39, 47];
 
@@ -497,12 +505,17 @@ function getTokenCoords(playerIdx, tokenIdx, pos) {
     return [gx * CELL_SIZE, gy * CELL_SIZE];
   }
 
-  // Finished Home
+  // Finished Home (step 56)
   if (pos >= 56) {
     const cx = 7.5 * CELL_SIZE;
     const cy = 7.5 * CELL_SIZE;
-    const offsets = [[-12, -12], [12, -12], [-12, 12], [12, 12]];
-    return [cx + offsets[tokenIdx][0], cy + offsets[tokenIdx][1]];
+    const baseOffset = HOME_CENTER_OFFSETS[pMeta.key];
+    // Spread tokens within their player's home quadrant
+    const spreadOffsets = [[-8, -8], [8, -8], [-8, 8], [8, 8]];
+    return [
+      cx + baseOffset[0] + spreadOffsets[tokenIdx][0] * 0.7,
+      cy + baseOffset[1] + spreadOffsets[tokenIdx][1] * 0.7
+    ];
   }
 
   // Home Runway (pos 51 to 55)
@@ -531,7 +544,7 @@ function buildMoveWaypoints(playerIdx, tokenIdx, startPos, endPos) {
     return waypoints;
   }
 
-  // Intermediate step-by-step path
+  // Intermediate step-by-step path from startPos+1 up to endPos (including step 56 home!)
   for (let s = startPos + 1; s <= endPos; s++) {
     const pt = getTokenCoords(playerIdx, tokenIdx, s);
     waypoints.push({ x: pt[0], y: pt[1] });
@@ -878,8 +891,144 @@ function endGame(winnerIdx) {
   gameState.winner = winnerIdx;
   const p = gameState.players[winnerIdx];
   const pMeta = PLAYERS[winnerIdx];
-  showToast("👑 MATCH WON!", `${p.name} (${pMeta.name}) navigated all 4 tokens home and won the match!`, "🏆");
+
+  showToast("👑 MATCH WON!", `${p.name} (${pMeta.name}) navigated all 4 tokens home!`, "🏆");
   document.getElementById('turnPrompt').textContent = `🏆 ${p.name} (${pMeta.name}) Wins!`;
+
+  // Confetti / celebratory victory particles
+  spawnVictoryVFX(pMeta.color);
+
+  // Sync End Game to P2P peers if host
+  if (gameState.mode === 'p2p' && peerEngine) {
+    peerEngine.send({ type: 'MATCH_WON', winnerIdx, state: gameState });
+  }
+
+  // Display Leaderboard / Standings Modal after short delay
+  setTimeout(() => {
+    showLeaderboardModal(winnerIdx);
+  }, 1200);
+}
+
+// Spawn Celebratory Victory Confetti Particles
+function spawnVictoryVFX(winnerColor) {
+  const colors = [winnerColor, '#fbbf24', '#f59e0b', '#38bdf8', '#a855f7', '#10b981', '#ffffff'];
+  const cx = 7.5 * CELL_SIZE;
+  const cy = 7.5 * CELL_SIZE;
+
+  // Expanding gold victory shockwave
+  activeParticles.push({
+    type: 'shockwave',
+    x: cx, y: cy,
+    radius: 10,
+    speed: 160,
+    color: '#fbbf24',
+    lineWidth: 6,
+    alpha: 1,
+    life: 0.8,
+    maxLife: 0.8
+  });
+
+  for (let i = 0; i < 60; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 60 + Math.random() * 260;
+    activeParticles.push({
+      type: 'particle',
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 60,
+      gravity: 90,
+      size: 4 + Math.random() * 5,
+      initialSize: 4 + Math.random() * 5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 1,
+      life: 1.0 + Math.random() * 0.8,
+      maxLife: 1.8,
+      rotation: Math.random() * Math.PI * 2,
+      vRot: (Math.random() - 0.5) * 10,
+      shape: Math.random() > 0.3 ? 'star' : 'circle'
+    });
+  }
+}
+
+// Display 1st, 2nd, 3rd, 4th Leaderboard Modal
+function showLeaderboardModal(winnerIdx) {
+  const modal = document.getElementById('gameOverModal');
+  const title = document.getElementById('winnerTitle');
+  const subtitle = document.getElementById('winnerSubtitle');
+  const podiumList = document.getElementById('podiumList');
+
+  const winner = gameState.players[winnerIdx];
+  const winnerMeta = PLAYERS[winnerIdx];
+
+  title.textContent = `${winner.name} Triumphs!`;
+  title.style.background = `linear-gradient(135deg, ${winnerMeta.lightColor}, ${winnerMeta.color}, #f59e0b)`;
+  title.style.webkitBackgroundClip = 'text';
+  title.style.webkitTextFillColor = 'transparent';
+
+  subtitle.textContent = `${winner.name} (${winnerMeta.name} Team) is crowned Champion of Ludo Royale!`;
+
+  // Calculate ranks for all 4 players
+  // Priority: 1. Finished home tokens (most) 2. Total track progress of remaining tokens (highest)
+  const rankedPlayers = gameState.players.map((pl, idx) => {
+    const meta = PLAYERS[idx];
+    const homeTokens = pl.tokens.filter(pos => pos >= 56).length;
+    // Calculate total track distance traveled (tokens in yard -1 count as 0)
+    const totalDistance = pl.tokens.reduce((acc, pos) => acc + (pos >= 0 ? pos : 0), 0);
+    return {
+      idx,
+      player: pl,
+      meta,
+      homeTokens,
+      totalDistance
+    };
+  });
+
+  // Winner is strictly #1
+  rankedPlayers.sort((a, b) => {
+    if (a.idx === winnerIdx) return -1;
+    if (b.idx === winnerIdx) return 1;
+    if (b.homeTokens !== a.homeTokens) return b.homeTokens - a.homeTokens;
+    return b.totalDistance - a.totalDistance;
+  });
+
+  const medals = [
+    { rank: '1st Place', icon: '🥇', bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 179, 8, 0.1))', border: '#f59e0b' },
+    { rank: '2nd Place', icon: '🥈', bg: 'linear-gradient(135deg, rgba(148, 163, 184, 0.25), rgba(203, 213, 225, 0.1))', border: '#94a3b8' },
+    { rank: '3rd Place', icon: '🥉', bg: 'linear-gradient(135deg, rgba(180, 83, 9, 0.25), rgba(217, 119, 6, 0.1))', border: '#b45309' },
+    { rank: '4th Place', icon: '🎖️', bg: 'linear-gradient(135deg, rgba(51, 65, 85, 0.25), rgba(30, 41, 59, 0.1))', border: '#475569' }
+  ];
+
+  podiumList.innerHTML = '';
+  rankedPlayers.forEach((item, rIdx) => {
+    const m = medals[rIdx];
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.justifyContent = 'space-between';
+    row.style.padding = '12px 18px';
+    row.style.borderRadius = '10px';
+    row.style.background = m.bg;
+    row.style.border = `1px solid ${m.border}`;
+
+    row.innerHTML = `
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.6rem;">${m.icon}</span>
+        <div style="text-align:left;">
+          <div style="font-weight:700; font-size:1rem; color:${item.meta.color};">
+            ${item.player.name} <span style="font-size:0.8rem; color:#94a3b8;">(${item.meta.name})</span>
+          </div>
+          <div style="font-size:0.75rem; color:#94a3b8;">${item.player.isBot ? '🤖 Bot' : '👤 Human'} • ${m.rank}</div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-weight:800; font-size:1rem; color:#f8fafc;">${item.homeTokens} / 4 Home</div>
+        <div style="font-size:0.75rem; color:#94a3b8;">${item.totalDistance} total steps</div>
+      </div>
+    `;
+    podiumList.appendChild(row);
+  });
+
+  modal.style.display = 'flex';
 }
 
 // Update Scoreboard UI
@@ -973,6 +1122,29 @@ function setupLobbyEvents() {
   tabBots.addEventListener('click', () => switchTab('bots'));
   tabCreate.addEventListener('click', () => switchTab('create'));
   tabJoin.addEventListener('click', () => switchTab('join'));
+
+  // Rematch and Lobby Switch buttons from Game Over Modal
+  const gameOverModal = document.getElementById('gameOverModal');
+  const rematchBtn = document.getElementById('rematchBtn');
+  const modalLobbyBtn = document.getElementById('modalLobbyBtn');
+
+  if (rematchBtn) {
+    rematchBtn.addEventListener('click', () => {
+      gameOverModal.style.display = 'none';
+      resetMatch();
+      showToast("Rematch Started!", "A new Ludo round has begun!", "🔄");
+      if (gameState.mode === 'p2p' && peerEngine) {
+        peerEngine.send({ type: 'MATCH_STARTED', state: gameState });
+      }
+    });
+  }
+
+  if (modalLobbyBtn) {
+    modalLobbyBtn.addEventListener('click', () => {
+      gameOverModal.style.display = 'none';
+      lobbyModal.style.display = 'flex';
+    });
+  }
 
   // Start Solo Match vs 3 Bots
   document.getElementById('startSoloBotsBtn').addEventListener('click', () => {
@@ -1069,6 +1241,11 @@ function initMultiP2P() {
         gameState = data.state;
         renderBoard();
         updateUI();
+      } else if (data.type === 'MATCH_WON') {
+        gameState = data.state;
+        renderBoard();
+        updateUI();
+        endGame(data.winnerIdx);
       } else if (data.type === 'DICE_ROLLED') {
         gameState.diceRoll = data.roll;
         gameState.currentTurn = data.turn;
