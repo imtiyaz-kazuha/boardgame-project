@@ -217,15 +217,14 @@ function renderTableLayout() {
 
   otherPlayers.forEach((p, index) => {
     // Distribute rival seats along the top/side arc of the table (from 170 deg to 10 deg)
-    // Avoid placing any seat at bottom (90 deg) where player 0's hand dock is!
     const startAngle = Math.PI * 0.95; // Left-mid
     const endAngle = Math.PI * 0.05;   // Right-mid
     
     // Spread evenly across top arc
     const angle = totalOthers === 1 ? -Math.PI / 2 : startAngle + index * ((2 * Math.PI - (startAngle - endAngle)) / (totalOthers - 1));
 
-    const x = cx + radiusX * Math.cos(angle) - 70; // 70 = half width of seat
-    const y = cy + radiusY * Math.sin(angle) - 45;
+    const x = cx + radiusX * Math.cos(angle) - (table.clientWidth <= 360 ? 45 : 60);
+    const y = cy + radiusY * Math.sin(angle) - (table.clientWidth <= 360 ? 30 : 40);
 
     const seat = document.createElement('div');
     seat.id = `seat_${p.id}`;
@@ -244,8 +243,16 @@ function renderTableLayout() {
       }
     });
 
+    // Reaction indicator tag beside player if set
+    const reactionTag = p.currentReaction ? `<div style="position:absolute; top:-18px; right:-10px; background:${p.currentReaction.bg}; border:1px solid ${p.currentReaction.border}; color:#fff; border-radius:999px; padding:2px 7px; font-size:0.68rem; font-weight:800; box-shadow:0 0 10px ${p.currentReaction.border}; z-index:20;">${p.currentReaction.text}</div>` : '';
+
+    // Active turn badge indicator
+    const turnTag = isCurrent ? `<div style="position:absolute; bottom:-16px; left:50%; transform:translateX(-50%); background:rgba(56, 189, 248, 0.9); color:#0f172a; border-radius:4px; padding:1px 6px; font-size:0.64rem; font-weight:800; white-space:nowrap;">CURRENT TURN</div>` : '';
+
     seat.innerHTML = `
-      <div class="seat-badge ${isCurrent ? 'seat-active' : ''}">
+      <div class="seat-badge ${isCurrent ? 'seat-active' : ''}" style="position:relative;">
+        ${reactionTag}
+        ${turnTag}
         <div class="seat-name" style="color:#f8fafc;">
           ${p.name} ${p.isBot ? '<span style="font-size:0.68rem; color:#94a3b8;">🤖</span>' : ''}
         </div>
@@ -421,6 +428,46 @@ function clearReactionTimer() {
   }
 }
 
+// Trigger Visual Challenge Splash Alert in center screen
+function triggerChallengeSplash(title, subtitle, icon = '⚔️', isSuccess = false) {
+  const splash = document.getElementById('centerChallengeSplash');
+  if (!splash) return;
+
+  const iconEl = document.getElementById('splashIcon');
+  const titleEl = document.getElementById('splashTitle');
+  const subEl = document.getElementById('splashSub');
+
+  iconEl.textContent = icon;
+  titleEl.textContent = title;
+  subEl.textContent = subtitle;
+
+  if (isSuccess) {
+    titleEl.style.background = 'linear-gradient(135deg, #10b981, #38bdf8)';
+    titleEl.style.webkitBackgroundClip = 'text';
+    titleEl.style.webkitTextFillColor = 'transparent';
+    iconEl.style.filter = 'drop-shadow(0 0 25px rgba(56, 189, 248, 0.8))';
+  } else {
+    titleEl.style.background = 'linear-gradient(135deg, #ef4444, #f59e0b)';
+    titleEl.style.webkitBackgroundClip = 'text';
+    titleEl.style.webkitTextFillColor = 'transparent';
+    iconEl.style.filter = 'drop-shadow(0 0 25px rgba(239, 68, 68, 0.8))';
+  }
+
+  splash.style.display = 'block';
+  requestAnimationFrame(() => {
+    splash.style.transform = 'translate(-50%, -50%) scale(1.1)';
+    splash.style.opacity = '1';
+  });
+
+  setTimeout(() => {
+    splash.style.transform = 'translate(-50%, -50%) scale(0.7)';
+    splash.style.opacity = '0';
+    setTimeout(() => {
+      splash.style.display = 'none';
+    }, 300);
+  }, 1800);
+}
+
 // Start Reaction Window (Challenge or Block) with 10-Second Countdown & Specific Descriptions
 function startReactionPhase(stage) {
   clearReactionTimer();
@@ -431,14 +478,29 @@ function startReactionPhase(stage) {
   const me = coupState.players[coupState.myPlayerIdx];
   const amIAlive = !isPlayerDead(me);
 
+  // Clear previous reaction tags
+  coupState.players.forEach(p => p.currentReaction = null);
+  renderTableLayout();
+
   const banner = document.getElementById('reactionBanner');
   const btnChallenge = document.getElementById('btnChallenge');
   const btnBlock = document.getElementById('btnBlock');
   const btnPass = document.getElementById('btnPass');
   const countdownBadge = document.getElementById('reactionCountdownBadge');
 
-  // Human reaction banner setup
-  if (amIAlive && action.actorIdx !== coupState.myPlayerIdx) {
+  // Human reaction banner eligibility:
+  // In stage 1 (action): cannot challenge own action!
+  // In stage 2 (block): ANYONE can challenge the blocker, EXCEPT the blocker themselves!
+  let canHumanReact = false;
+  if (amIAlive) {
+    if (stage === 'action_challenge_or_block' && action.actorIdx !== coupState.myPlayerIdx) {
+      canHumanReact = true;
+    } else if (stage === 'block_challenge' && action.blockedBy !== coupState.myPlayerIdx) {
+      canHumanReact = true; // Can challenge the blocker (e.g. guy claiming Contessa)!
+    }
+  }
+
+  if (canHumanReact) {
     banner.style.display = 'flex';
 
     if (stage === 'action_challenge_or_block') {
@@ -477,16 +539,16 @@ function startReactionPhase(stage) {
       btnChallenge.style.display = 'inline-flex';
       btnBlock.style.display = 'none';
 
-      // Specific descriptive text for who blocked what:
+      // Explicit description of who blocked what:
       if (action.actionType === 'steal') {
         document.getElementById('reactionTitle').textContent = `Challenge Block of Stealing?`;
-        document.getElementById('reactionDesc').textContent = `${blocker.name} claims ${action.blockRole.name} to BLOCK ${actor.name} from stealing their coins!`;
+        document.getElementById('reactionDesc').textContent = `${blocker.name} claims ${action.blockRole.name} to BLOCK ${actor.name} from stealing!`;
       } else if (action.actionType === 'assassinate') {
-        document.getElementById('reactionTitle').textContent = `Challenge Block of Assassination?`;
-        document.getElementById('reactionDesc').textContent = `${blocker.name} claims Contessa to DEFLECT ${actor.name}'s assassination!`;
+        document.getElementById('reactionTitle').textContent = `Challenge Contessa Block?`;
+        document.getElementById('reactionDesc').textContent = `${blocker.name} claims CONTESSA to DEFLECT ${actor.name}'s assassination! Call their bluff?`;
       } else if (action.actionType === 'foreign_aid') {
         document.getElementById('reactionTitle').textContent = `Challenge Duke Block?`;
-        document.getElementById('reactionDesc').textContent = `${blocker.name} claims Duke to BLOCK ${actor.name}'s Foreign Aid!`;
+        document.getElementById('reactionDesc').textContent = `${blocker.name} claims DUKE to BLOCK ${actor.name}'s Foreign Aid! Call their bluff?`;
       } else {
         document.getElementById('reactionTitle').textContent = `${blocker.name} claims ${action.blockRole.name} to BLOCK!`;
         document.getElementById('reactionDesc').textContent = `Challenge ${blocker.name}'s claim of ${action.blockRole.name}?`;
@@ -516,7 +578,7 @@ function startReactionPhase(stage) {
     }
   }, 1000);
 
-  // Trigger Autonomous Bots Reaction checks (they respond within 1-2s)
+  // Trigger Autonomous Bots Reaction checks (they think for 2.2 - 3.5s to let human read!)
   evaluateBotReactions(stage);
 }
 
@@ -535,26 +597,33 @@ function onReactionTimeout(stage) {
   }
 }
 
-// Autonomous Bot Reaction Evaluation
+// Autonomous Bot Reaction Evaluation (slower paced to let human think)
 function evaluateBotReactions(stage) {
   const action = coupState.pendingAction;
   const livingBots = coupState.players.filter(p => p.isBot && !isPlayerDead(p) && p.id !== action.actorIdx);
 
-  // Short thinking timer for reactions
+  // Slower paced thinking timer (2.2s) so player can observe and react first!
   setTimeout(() => {
-    if (!coupState.pendingAction) return;
+    if (!coupState.pendingAction || coupState.reactionState?.stage !== stage) return;
 
     if (stage === 'action_challenge_or_block') {
       // 1. Check if any bot wants to challenge the action
       for (const bot of livingBots) {
         if (action.canBeChallenged && botDecidesToChallenge(bot, action.claimedRole)) {
-          resolveChallenge(bot.id, action.actorIdx, action.claimedRole, () => {
-            // Action failed due to successful challenge
-            finishActionTurn();
-          }, () => {
-            // Action verified, continue to resolve
-            applyActionEffect(action);
-          });
+          bot.currentReaction = { text: '⚔️ CHALLENGE!', bg: '#dc2626', border: '#ef4444' };
+          renderTableLayout();
+          clearReactionTimer();
+          document.getElementById('reactionBanner').style.display = 'none';
+
+          triggerChallengeSplash(`CHALLENGE DECLARED!`, `${bot.name} called ${coupState.players[action.actorIdx].name}'s bluff!`, '⚔️', false);
+
+          setTimeout(() => {
+            resolveChallenge(bot.id, action.actorIdx, action.claimedRole, () => {
+              finishActionTurn();
+            }, () => {
+              applyActionEffect(action);
+            });
+          }, 1500);
           return;
         }
       }
@@ -564,34 +633,51 @@ function evaluateBotReactions(stage) {
         if (action.canBeBlocked) {
           const blockRole = botDecidesToBlock(bot, action);
           if (blockRole) {
+            bot.currentReaction = { text: `🛡️ ${blockRole.name}`, bg: '#7c3aed', border: '#a855f7' };
+            renderTableLayout();
             declareBlock(bot.id, blockRole);
             return;
           }
         }
       }
 
-      // If no human response after 3 seconds and no bot reacted, auto-pass
-      if (action.actorIdx !== coupState.myPlayerIdx) {
-        // Human had a chance; bot will auto-resolve if no interaction
-      }
+      // If bots passed, mark with green ALLOW tags
+      livingBots.forEach(b => {
+        b.currentReaction = { text: '✓ ALLOW', bg: '#065f46', border: '#10b981' };
+      });
+      renderTableLayout();
+
     } else if (stage === 'block_challenge') {
       // Check if any bot challenges the blocker
       for (const bot of livingBots) {
         if (bot.id !== action.blockedBy && botDecidesToChallenge(bot, action.blockRole)) {
-          resolveChallenge(bot.id, action.blockedBy, action.blockRole, () => {
-            // Blocker lied! Block fails, action succeeds!
-            showToast("Blocker Caught!", `${coupState.players[action.blockedBy].name} was caught bluffing their block!`, "💥");
-            applyActionEffect(action);
-          }, () => {
-            // Blocker told truth! Block holds, action negated!
-            showToast("Block Succeeded!", `${coupState.players[action.blockedBy].name} proved their block! Action blocked.`, "🛡️");
-            finishActionTurn();
-          });
+          bot.currentReaction = { text: '⚔️ CHALLENGE!', bg: '#dc2626', border: '#ef4444' };
+          renderTableLayout();
+          clearReactionTimer();
+          document.getElementById('reactionBanner').style.display = 'none';
+
+          triggerChallengeSplash(`BLOCK CHALLENGED!`, `${bot.name} challenged ${coupState.players[action.blockedBy].name}'s ${action.blockRole.name}!`, '⚔️', false);
+
+          setTimeout(() => {
+            resolveChallenge(bot.id, action.blockedBy, action.blockRole, () => {
+              applyActionEffect(action);
+            }, () => {
+              finishActionTurn();
+            });
+          }, 1500);
           return;
         }
       }
+
+      // If bots passed on block
+      livingBots.forEach(b => {
+        if (b.id !== action.blockedBy) {
+          b.currentReaction = { text: '✓ ALLOW', bg: '#065f46', border: '#10b981' };
+        }
+      });
+      renderTableLayout();
     }
-  }, 1200);
+  }, 2400); // 2.4s thinking delay gives human plenty of time to read and challenge!
 }
 
 // Bot Challenge Heuristic (Probabilistic)
@@ -659,7 +745,7 @@ function resolveChallenge(challengerIdx, claimantIdx, claimedRole, onLieSuccess,
   setTimeout(() => {
     if (hasRealCard) {
       // CLAIMANT WAS TELLING THE TRUTH!
-      // Claimant reveals card, shuffles into court deck, and draws a fresh card!
+      triggerChallengeSplash(`TRUTH PROVEN!`, `${claimant.name} revealed a REAL ${claimedRole.name}!\n${challenger.name} loses influence!`, '✨', true);
       showToast("TRUTH PROVED!", `${claimant.name} revealed a real ${claimedRole.name}! ${challenger.name} loses influence!`, "✨");
 
       // Swap claimant card for fresh one from deck
@@ -677,6 +763,7 @@ function resolveChallenge(challengerIdx, claimantIdx, claimedRole, onLieSuccess,
       });
     } else {
       // CLAIMANT WAS BLUFFING / LYING!
+      triggerChallengeSplash(`BLUFF CAUGHT!`, `${claimant.name} lied about holding ${claimedRole.name}!\n${claimant.name} loses influence!`, '💥', false);
       showToast("BLUFF CAUGHT!", `${claimant.name} was CAUGHT LYING! They lose influence!`, "💥");
 
       // Claimant loses an influence card!
@@ -684,7 +771,7 @@ function resolveChallenge(challengerIdx, claimantIdx, claimedRole, onLieSuccess,
         onLieSuccess();
       });
     }
-  }, 1000);
+  }, 1200);
 }
 
 // Apply Action Effect once permitted
@@ -815,7 +902,8 @@ function finishActionTurn() {
   setCenterPrompt(`It is <strong>${nextP.name}</strong>'s turn.`);
 
   if (nextP.isBot) {
-    setTimeout(handleBotTurn, 1000);
+    // Slower, deliberate pacing for AI turns (2.2s) with current turn highlight
+    setTimeout(handleBotTurn, 2200);
   }
 }
 
