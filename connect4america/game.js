@@ -99,14 +99,23 @@ const US_ROUTES = [
   { id: 'r_air_den_atl', from: 'denver', to: 'atlanta', cost: 3, modes: ['flight'], offset: 15 }
 ];
 
-// Coast to Coast US Missions
+// Coast to Coast US Missions & Regional Expansions (Expanded to 12 Diverse Quests!)
 const MISSIONS_POOL = [
-  { id: 'm1', name: 'Transcontinental Express', from: 'seattle', to: 'newyork', pts: 22, desc: 'Connect Seattle (WA) to New York (NY)' },
+  // Mega Coast-to-Coast Transcontinentals (20-25 pts)
+  { id: 'm1', name: 'Transcontinental Express', from: 'seattle', to: 'newyork', pts: 24, desc: 'Connect Seattle (WA) to New York (NY)' },
   { id: 'm2', name: 'Historic Route 66', from: 'losangeles', to: 'chicago', pts: 18, desc: 'Connect Los Angeles (CA) to Chicago (IL)' },
-  { id: 'm3', name: 'Sunshine Route', from: 'miami', to: 'sanfrancisco', pts: 24, desc: 'Connect Miami (FL) to San Francisco (CA)' },
-  { id: 'm4', name: 'Dixie Corridor', from: 'dallas', to: 'washington', pts: 16, desc: 'Connect Dallas (TX) to Washington D.C.' },
-  { id: 'm5', name: 'Rocky Mountain Flyway', from: 'denver', to: 'boston', pts: 16, desc: 'Connect Denver (CO) to Boston (MA)' },
-  { id: 'm6', name: 'Pacific Cascades', from: 'seattle', to: 'losangeles', pts: 12, desc: 'Connect Seattle (WA) to Los Angeles (CA)' }
+  { id: 'm3', name: 'Sunshine Route', from: 'miami', to: 'sanfrancisco', pts: 25, desc: 'Connect Miami (FL) to San Francisco (CA)' },
+  { id: 'm4', name: 'Lone Star Capitol Run', from: 'dallas', to: 'washington', pts: 18, desc: 'Connect Dallas (TX) to Washington D.C.' },
+  { id: 'm5', name: 'Rocky Mountain Flyway', from: 'denver', to: 'boston', pts: 20, desc: 'Connect Denver (CO) to Boston (MA)' },
+  { id: 'm6', name: 'Pacific Cascades & Coast', from: 'seattle', to: 'losangeles', pts: 14, desc: 'Connect Seattle (WA) to Los Angeles (CA)' },
+
+  // New High-Stakes Regional & Diagonal Quests
+  { id: 'm7', name: 'Great Lakes to Gulf', from: 'chicago', to: 'neworleans', pts: 16, desc: 'Connect Chicago (IL) to New Orleans (LA)' },
+  { id: 'm8', name: 'Atlantic Seaboard Line', from: 'boston', to: 'miami', pts: 20, desc: 'Connect Boston (MA) to Miami (FL)' },
+  { id: 'm9', name: 'Northern Border Pioneer', from: 'seattle', to: 'minneapolis', pts: 18, desc: 'Connect Seattle (WA) to Minneapolis (MN)' },
+  { id: 'm10', name: 'Southwest Desert Express', from: 'sanfrancisco', to: 'houston', pts: 22, desc: 'Connect San Francisco (CA) to Houston (TX)' },
+  { id: 'm11', name: 'Midwest Motor Corridor', from: 'detroit', to: 'dallas', pts: 16, desc: 'Connect Detroit (MI) to Dallas (TX)' },
+  { id: 'm12', name: 'Heartland Connection', from: 'minneapolis', to: 'atlanta', pts: 16, desc: 'Connect Minneapolis (MN) to Atlanta (GA)' }
 ];
 
 // Game State
@@ -413,10 +422,10 @@ function confirmClaimRoute(routeId, chosenMode, useJokers) {
   renderCityPins();
   updateVisuals();
 
-  // Check Game End: concludes when less than 2 unclaimed paths remain on the board
+  // Check Game End: concludes when less than or equal to 2 unclaimed paths remain on the board (<= 2)
   const totalClaimedCount = Object.keys(state.claimed).length;
   const remainingRoutes = US_ROUTES.length - totalClaimedCount;
-  if (remainingRoutes < 2) {
+  if (remainingRoutes <= 2) {
     const endReason = `reached network capacity (only ${remainingRoutes} path${remainingRoutes === 1 ? '' : 's'} remaining)`;
     endGame(state.p1Score >= state.p2Score ? 1 : 2, endReason);
     return;
@@ -645,7 +654,7 @@ function updateTurnIndicator() {
   }
 }
 
-// Adaptive Strategic AI
+// Master Strategic AI Conductor (BFS Pathfinding, Quest Hunting, & Long-Chain Optimization)
 function playAITurn() {
   if (state.gameOver || state.currentTurn !== 2) return;
 
@@ -659,31 +668,84 @@ function playAITurn() {
     }
   });
 
+  const cityMap = {};
+  US_CITIES.forEach(c => cityMap[c.id] = c);
+
+  // Helper BFS: find shortest remaining hops for a player between two cities
+  function getShortestPathHops(fromId, toId, myClaimedRoutes) {
+    const myRoutesSet = new Set(myClaimedRoutes);
+    const queue = [{ city: fromId, hops: 0 }];
+    const visited = new Set([fromId]);
+
+    while (queue.length > 0) {
+      const curr = queue.shift();
+      if (curr.city === toId) return curr.hops;
+
+      // Find all connected edges via unclaimed or own routes
+      US_ROUTES.forEach(r => {
+        let neighbor = null;
+        if (r.from === curr.city) neighbor = r.to;
+        else if (r.to === curr.city) neighbor = r.from;
+
+        if (neighbor && !visited.has(neighbor)) {
+          // If already claimed by opponent, path is blocked!
+          const claim = state.claimed[r.id];
+          if (!claim || claim.player === 2) {
+            visited.add(neighbor);
+            const additionalHop = (claim && claim.player === 2) ? 0 : 1;
+            queue.push({ city: neighbor, hops: curr.hops + additionalHop });
+          }
+        }
+      });
+    }
+    return 999; // Unreachable
+  }
+
+  // Strategic AI Decision: Should the AI claim a route or draw tickets?
+  // If the AI has an affordable route that connects a mission or yields high points, take it.
+  // If affordable routes are low value or will burn too many jokers, draw more tickets to build a stronger hand.
   if (affordable.length > 0) {
     let best = null;
     let highestScore = -Infinity;
 
     affordable.forEach(({ route, match }) => {
-      let weight = route.km;
+      // Base score from distance
+      let weight = route.km * 2;
 
-      // Mission connection priority: race to claim shared quest before human!
+      // Check if claiming this route directly finishes an active mission
+      const testRoutes = [...state.p2Routes, route.id];
       state.activeMissions.forEach(m => {
-        if (route.from === m.from || route.to === m.from || route.from === m.to || route.to === m.to) {
-          weight += 7500;
+        // BFS check
+        const hopsBefore = getShortestPathHops(m.from, m.to, state.p2Routes);
+        const hopsAfter = getShortestPathHops(m.from, m.to, testRoutes);
+
+        if (hopsAfter === 0) {
+          // DIRECT COMPLETION OF QUEST!
+          weight += 50000 + (m.pts * 1000);
+        } else if (hopsAfter < hopsBefore && hopsAfter <= 2) {
+          // High-priority step advancing closer to quest completion
+          weight += 18000 + (m.pts * 300);
+        } else if (hopsAfter < hopsBefore) {
+          weight += 8000;
+        }
+
+        // Tactical Block: check if HUMAN is 1 hop away from claiming this mission!
+        const humanHops = getShortestPathHops(m.from, m.to, state.p1Routes);
+        if (humanHops === 1 && (route.from === m.from || route.to === m.to || route.from === m.to || route.to === m.from)) {
+          weight += 25000; // Counter-claim to deny huge quest bounty!
         }
       });
 
-      // Tactical blocking: if human player is 1 hop away from connecting a mission, prioritize blocking that route
-      state.p1Routes.forEach(p1Rid => {
-        const p1R = US_ROUTES.find(x => x.id === p1Rid);
-        if (p1R && (p1R.from === route.from || p1R.to === route.to || p1R.from === route.to || p1R.to === route.from)) {
-          weight += 2000; // Counter-expansion & blocking
-        }
+      // Chain continuity: bonus if route links to existing AI network
+      const connectsToMyNetwork = state.p2Routes.some(id => {
+        const r = US_ROUTES.find(x => x.id === id);
+        return r && (r.from === route.from || r.to === route.to || r.from === route.to || r.to === route.from);
       });
+      if (connectsToMyNetwork) {
+        weight += 6000;
+      }
 
-      // Bonus for expanding into new states
-      const cityMap = {};
-      US_CITIES.forEach(c => cityMap[c.id] = c);
+      // Expansion bonus for new states
       const claimedStates = new Set();
       state.p2Routes.forEach(id => {
         const r = US_ROUTES.find(x => x.id === id);
@@ -693,15 +755,18 @@ function playAITurn() {
         }
       });
       if (!claimedStates.has(cityMap[route.from].state) || !claimedStates.has(cityMap[route.to].state)) {
-        weight += 3500;
+        weight += 4500;
       }
 
-      // Conserve rare jokers unless high value route (>= 1500 km or mission link)
+      // Air corridor bonus: flights give enormous instant points
+      if (match.mode === 'flight') {
+        weight += 4000;
+      }
+
+      // Joker conservation penalty on small low-importance routes
       if (match.useJokers > 0) {
-        if (route.km > 1500) {
-          weight -= 500;
-        } else {
-          weight -= 2500;
+        if (route.km < 1200) {
+          weight -= 3000 * match.useJokers;
         }
       }
 
@@ -711,13 +776,18 @@ function playAITurn() {
       }
     });
 
+    // If best option is too weak and AI has fewer than 6 tickets, draw instead to prepare for big moves
+    const totalAITickets = state.p2Tickets.train + state.p2Tickets.road + state.p2Tickets.flight + state.p2Tickets.joker;
+    if (highestScore < 8000 && totalAITickets < 6) {
+      drawRandomTickets(2);
+      showToast("AI Tactical Draw", "AI Conductor drew 2 transit tickets to prepare a strategic expansion.", "🤖");
+      state.currentTurn = 1;
+      updateUI();
+      return;
+    }
+
     const { route, match } = best || affordable[0];
     const tickets = state.p2Tickets;
-    const cityMap = {};
-    US_CITIES.forEach(c => cityMap[c.id] = c);
-
-    const stateFrom = cityMap[route.from].state;
-    const stateTo = cityMap[route.to].state;
 
     // Deduct
     const regularSpent = route.cost - match.useJokers;
@@ -735,7 +805,7 @@ function playAITurn() {
 
     const totalClaimedCount = Object.keys(state.claimed).length;
     const remainingRoutes = US_ROUTES.length - totalClaimedCount;
-    if (remainingRoutes < 2) {
+    if (remainingRoutes <= 2) {
       endGame(state.p1Score >= state.p2Score ? 1 : 2, `reached network capacity (only ${remainingRoutes} path${remainingRoutes === 1 ? '' : 's'} remaining)`);
       return;
     }
@@ -744,6 +814,7 @@ function playAITurn() {
     state.currentTurn = 1;
     updateUI();
   } else {
+    // Cannot afford any route: draw tickets
     drawRandomTickets(2);
     showToast("AI Move", "AI Conductor drew 2 transit tickets.", "🤖");
     state.currentTurn = 1;
@@ -792,6 +863,69 @@ document.getElementById('drawTicketsBtn').addEventListener('click', () => {
   }
 });
 
+// Confetti VFX Engine for Victory Screen
+let victoryParticles = [];
+let confettiAnimId = null;
+
+function spawnVictoryConfetti() {
+  const canvas = document.getElementById('victoryConfettiCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ['#f59e0b', '#38bdf8', '#a855f7', '#ef4444', '#10b981', '#ec4899', '#facc15'];
+  victoryParticles = [];
+
+  for (let i = 0; i < 150; i++) {
+    victoryParticles.push({
+      x: canvas.width / 2 + (Math.random() - 0.5) * 200,
+      y: canvas.height * 0.45,
+      vx: (Math.random() - 0.5) * 16,
+      vy: Math.random() * -14 - 4,
+      size: 5 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      vRot: (Math.random() - 0.5) * 10,
+      gravity: 0.35 + Math.random() * 0.2,
+      opacity: 1
+    });
+  }
+
+  if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+
+  function renderConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = victoryParticles.length - 1; i >= 0; i--) {
+      const p = victoryParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.gravity;
+      p.rotation += p.vRot;
+      p.vx *= 0.99;
+
+      if (p.y > canvas.height + 20) {
+        victoryParticles.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rotation * Math.PI) / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.5);
+      ctx.restore();
+    }
+
+    if (victoryParticles.length > 0) {
+      confettiAnimId = requestAnimationFrame(renderConfetti);
+    }
+  }
+
+  confettiAnimId = requestAnimationFrame(renderConfetti);
+}
+
 function endGame(winnerNum, reason) {
   state.gameOver = true;
   const winnerName = winnerNum === 1 ? state.p1Name : state.p2Name;
@@ -799,14 +933,49 @@ function endGame(winnerNum, reason) {
   const p2Final = state.p2Score;
 
   let grandWinner = winnerName;
-  if (p1Final !== p2Final) {
-    grandWinner = p1Final > p2Final ? state.p1Name : state.p2Name;
+  let isTie = false;
+  if (p1Final > p2Final) {
+    grandWinner = state.p1Name;
+  } else if (p2Final > p1Final) {
+    grandWinner = state.p2Name;
+  } else {
+    isTie = true;
   }
 
-  setTimeout(() => {
-    alert(`🏁 EXPEDITION COMPLETE!\n\n${winnerName} ${reason}!\n\nFinal Scores:\n${state.p1Name}: ${p1Final} pts (${state.p1StatesCount}/17 states)\n${state.p2Name}: ${p2Final} pts (${state.p2StatesCount}/17 states)\n\n🏆 Grand Champion: ${grandWinner}!`);
-  }, 200);
+  const modal = document.getElementById('victoryModal');
+  const icon = document.getElementById('victoryIcon');
+  const title = document.getElementById('victoryWinnerTitle');
+  const sub = document.getElementById('victoryWinnerSubtitle');
+
+  if (isTie) {
+    icon.textContent = "🤝";
+    title.textContent = "HONORABLE DRAW!";
+    sub.textContent = `Both conductors engineered networks of equal mastery (${p1Final} pts each) before paths ran out!`;
+  } else {
+    icon.textContent = grandWinner === state.p1Name ? "🏆" : "🤖";
+    title.textContent = `${grandWinner.toUpperCase()} VICTORIOUS!`;
+    sub.textContent = `${grandWinner} completed the expedition with superior strategic route planning! (${reason})`;
+  }
+
+  // Populate scoreboard
+  document.getElementById('vicP1Name').textContent = state.p1Name;
+  document.getElementById('vicP1Score').textContent = `${p1Final} pts`;
+  document.getElementById('vicP1Stats').textContent = `${state.p1StatesCount}/17 states • ${state.p1TotalKm.toLocaleString()} km`;
+
+  document.getElementById('vicP2Name').textContent = state.p2Name;
+  document.getElementById('vicP2Score').textContent = `${p2Final} pts`;
+  document.getElementById('vicP2Stats').textContent = `${state.p2StatesCount}/17 states • ${state.p2TotalKm.toLocaleString()} km`;
+
+  modal.style.display = 'flex';
+  spawnVictoryConfetti();
 }
+
+// Play Again button inside victory modal
+document.getElementById('vicPlayAgainBtn').addEventListener('click', () => {
+  document.getElementById('victoryModal').style.display = 'none';
+  if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+  resetGameSession();
+});
 
 // Reset Map View
 document.getElementById('centerMapBtn').addEventListener('click', () => {
