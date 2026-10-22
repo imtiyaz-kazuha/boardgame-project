@@ -1,5 +1,5 @@
 /**
- * Heist Royale: Casino Vault
+ * Heist Royale: Bank Vault
  * Simultaneous Secret Action Selection, Greed Collision, & High-Stakes Looting
  * Pure Web Audio Synthesis + Canvas VFX + Multi-Peer P2P Engine
  */
@@ -163,13 +163,13 @@ function initGameSession(playerCount = 4, myName = 'Mastermind') {
   showToast("Heist Commenced!", "Round 1 begins! Choose your secret action card.", "💎");
 }
 
-// Render Seats Around Circular Casino Table
+// Render Seats Around Circular Vault Table
 function renderSeatsLayout() {
   const container = document.getElementById('seatsContainer');
   container.innerHTML = '';
   const total = gameState.players.length;
 
-  const table = document.getElementById('casinoTable');
+  const table = document.getElementById('vaultTable');
   const rx = (table.clientWidth / 2) - 30;
   const ry = (table.clientHeight / 2) - 30;
   const cx = table.clientWidth / 2;
@@ -518,7 +518,7 @@ function endHeistGame() {
   scoreList.innerHTML = '';
 
   title.textContent = `${grandWinner.name.toUpperCase()} ESCAPED!`;
-  sub.textContent = `${grandWinner.name} escaped the casino vault with the greatest fortune!`;
+  sub.textContent = `${grandWinner.name} escaped the bank vault with the greatest fortune!`;
 
   gameState.players.forEach((p, rank) => {
     const row = document.createElement('div');
@@ -542,11 +542,11 @@ function endHeistGame() {
     }));
 
     sendDiscordMatchReport({
-      gameName: 'Heist Royale: Casino Vault',
-      gameIcon: '🎰',
+      gameName: 'Heist Royale: Bank Vault',
+      gameIcon: '🏦',
       color: 0xfbbf24,
       winner: grandWinner.name,
-      summary: `**${grandWinner.name}** cracked the casino vault and escaped with **${grandWinner.finalScore} Net Worth**!`,
+      summary: `**${grandWinner.name}** cracked the bank vault and escaped with **${grandWinner.finalScore} Net Worth**!`,
       fields: fields
     });
   }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heist Royale: Casino Vault | Imtiboard</title>
+  <title>Heist Royale: Bank Vault | Imtiboard</title>
   <link rel="stylesheet" href="../shared/common.css">
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="../shared/multi-peer-engine.js"></script>
@@ -43,7 +43,7 @@
       box-sizing: border-box;
     }
 
-    .casino-table {
+    .vault-table {
       width: 620px;
       height: 440px;
       max-width: 96vw;
@@ -328,7 +328,7 @@
         padding: 6px 6px 200px;
         min-height: 480px;
       }
-      .casino-table {
+      .vault-table {
         width: 360px;
         height: 380px;
       }
@@ -382,7 +382,7 @@
       <h1 style="font-size: 1.15rem; font-weight: 800; margin: 0; background: linear-gradient(135deg, #fbbf24, #10b981, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
         💎 Heist Royale
       </h1>
-      <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.72rem; padding: 2px 8px;">Casino Vault</span>
+      <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.72rem; padding: 2px 8px;">Bank Vault</span>
     </div>
 
     <div style="display: flex; gap: 8px;">
@@ -397,7 +397,7 @@
 
   <!-- Table Viewport -->
   <main class="table-viewport">
-    <div class="casino-table" id="casinoTable">
+    <div class="vault-table" id="vaultTable">
       <!-- Player Seats Around Table -->
       <div id="seatsContainer"></div>
 
@@ -450,7 +450,7 @@
         HEIST CONCLUDED!
       </h2>
       <p id="victorySubtitle" style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
-        The casino vault lockdown has sealed the exit doors!
+        The bank vault lockdown has sealed the security doors!
       </p>
 
       <div id="victoryScoreList" style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; display: flex; flex-direction: column; gap: 8px;">
@@ -489,7 +489,7 @@
             <li><strong>💎 Cat Burglar:</strong> Steal the Giant Diamond (+5 Gold). <em>(Collides and fails if another player plays Cat Burglar!)</em></li>
             <li><strong>🪓 Hacker:</strong> Disable traps and steal 1 Gold from every player who scored this turn!</li>
             <li><strong>🥷 Pickpocket:</strong> Target a rival; if they score gold this turn, steal half of it!</li>
-            <li><strong>🚨 The Snitch:</strong> Call casino SWAT. If 2 or more players collided this turn, collect a +4 Gold bounty from the house!</li>
+            <li><strong>🚨 The Snitch:</strong> Call Bank Security SWAT. If 2 or more players collided this turn, collect a +4 Gold bounty from the bank!</li>
             <li><strong>🚗 Getaway Driver:</strong> Permanently bank all your loose gold into your safehouse (banked gold can never be stolen!).</li>
           </ul>
         </section>
