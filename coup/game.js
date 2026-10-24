@@ -212,8 +212,8 @@ function renderTableLayout() {
   const cx = table.clientWidth / 2;
   const cy = table.clientHeight / 2;
 
-  // Active rival opponents (excluding player 0 / me, who is in bottom dock)
-  const otherPlayers = coupState.players.filter(p => p.id !== 0);
+  // Active rival opponents (excluding myPlayerIdx, who is in bottom dock)
+  const otherPlayers = coupState.players.filter(p => p.id !== coupState.myPlayerIdx);
   const totalOthers = otherPlayers.length;
 
   otherPlayers.forEach((p, index) => {
@@ -1388,20 +1388,44 @@ function setupLobbyEvents() {
 function initMultiP2P(maxPlayers = 6) {
   if (peerEngine) peerEngine.destroy();
 
+  const lobbyModal = document.getElementById('lobbyModal');
+
   peerEngine = new MultiPeerEngine({
     gamePrefix: 'coup',
     maxPlayers: maxPlayers,
     onStatus: (status) => {
       const el = document.getElementById('joinStatusText');
       if (el) el.textContent = status;
+      const countEl = document.getElementById('waitingCountText');
+      if (countEl && peerEngine.isHost) {
+        countEl.textContent = `Connected: ${peerEngine.clientConns.length + 1} / ${maxPlayers} Players`;
+      }
     },
     onPlayerJoined: (client) => {
-      document.getElementById('waitingCountText').textContent = `Connected: ${peerEngine.clientConns.length + 1} / ${maxPlayers} Players`;
+      const countEl = document.getElementById('waitingCountText');
+      if (countEl) countEl.textContent = `Connected: ${peerEngine.clientConns.length + 1} / ${maxPlayers} Players`;
       showToast("Agent Infiltrated", `${client.name} joined the syndicate table!`, "👋");
     },
     onData: (data) => {
-      if (data.type === 'MATCH_STARTED') {
+      if (data.type === '_SYS_ASSIGN_SLOT') {
+        coupState.myPlayerIdx = data.playerIndex;
+        showToast("Role Assigned", `You joined as Agent #${data.playerIndex + 1}!`, "🎭");
+        const statusEl = document.getElementById('joinStatusText');
+        if (statusEl) {
+          statusEl.textContent = `Connected as Agent #${data.playerIndex + 1} (${data.totalConnected}/${data.maxPlayers}). Waiting for host...`;
+        }
+      } else if (data.type === '_SYS_LOBBY_UPDATE') {
+        const statusEl = document.getElementById('joinStatusText');
+        if (statusEl) {
+          statusEl.textContent = `Connected: ${data.totalConnected} / ${data.maxPlayers} Agents. Waiting for host...`;
+        }
+      } else if (data.type === 'MATCH_STARTED') {
+        const mySavedIdx = coupState.myPlayerIdx;
         coupState = data.state;
+        coupState.myPlayerIdx = mySavedIdx;
+        coupState.mode = 'p2p';
+        if (lobbyModal) lobbyModal.style.display = 'none';
+        showToast("Syndicate Deployed", "Host launched the Coup match!", "🚀");
         renderTableLayout();
         renderMyHand();
         updateCommandControls();

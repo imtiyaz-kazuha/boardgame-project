@@ -1237,27 +1237,61 @@ function setupLobbyEvents() {
 function initMultiP2P() {
   if (peerEngine) peerEngine.destroy();
 
+  const lobbyModal = document.getElementById('lobbyModal');
+
   peerEngine = new MultiPeerEngine({
     gamePrefix: 'ludo',
     maxPlayers: 4,
     onStatus: (status) => {
       const el = document.getElementById('joinStatusText');
       if (el) el.textContent = status;
+      const hostWaiting = document.getElementById('waitingCountText');
+      if (hostWaiting && peerEngine.isHost) {
+        hostWaiting.textContent = `Connected: ${peerEngine.clientConns.length + 1} / 4 Players`;
+      }
     },
     onPlayerJoined: (client) => {
-      document.getElementById('waitingCountText').textContent = `Connected: ${peerEngine.clientConns.length + 1} / 4 Players`;
+      const countEl = document.getElementById('waitingCountText');
+      if (countEl) countEl.textContent = `Connected: ${peerEngine.clientConns.length + 1} / 4 Players`;
       gameState.players[client.playerIndex] = { id: client.playerIndex, name: client.name, isBot: false, tokens: [-1, -1, -1, -1] };
       showToast("Player Joined!", `${client.name} connected to the room!`, "👋");
-      peerEngine.send({ type: 'SYNC_LOBBY', players: gameState.players });
+      peerEngine.send({ type: 'SYNC_LOBBY', players: gameState.players, totalConnected: peerEngine.clientConns.length + 1 });
       updateUI();
     },
     onData: (data) => {
-      if (data.type === 'MATCH_STARTED' || data.type === 'TOKEN_MOVED') {
+      if (data.type === '_SYS_ASSIGN_SLOT') {
+        gameState.myPlayerIdx = data.playerIndex;
+        const pMeta = PLAYERS[data.playerIndex];
+        showToast("Assigned Team", `You are Player ${data.playerIndex + 1} (${pMeta.name})!`, "🎨");
+        const statusEl = document.getElementById('joinStatusText');
+        if (statusEl) {
+          statusEl.textContent = `Joined as ${pMeta.name} (${data.totalConnected}/${data.maxPlayers} players). Waiting for host...`;
+        }
+      } else if (data.type === '_SYS_LOBBY_UPDATE') {
+        const countText = `Connected: ${data.totalConnected} / ${data.maxPlayers} Players`;
+        const joinStatus = document.getElementById('joinStatusText');
+        if (joinStatus && !peerEngine.isHost) {
+          joinStatus.textContent = countText;
+        }
+      } else if (data.type === 'MATCH_STARTED') {
+        const mySavedIdx = gameState.myPlayerIdx;
         gameState = data.state;
+        gameState.myPlayerIdx = mySavedIdx; // Preserve client's assigned slot
+        gameState.mode = 'p2p';
+        if (lobbyModal) lobbyModal.style.display = 'none';
+        showToast("Match Started!", "The host has started the Ludo Royale match!", "🚀");
+        renderBoard();
+        updateUI();
+      } else if (data.type === 'TOKEN_MOVED') {
+        const mySavedIdx = gameState.myPlayerIdx;
+        gameState = data.state;
+        gameState.myPlayerIdx = mySavedIdx;
         renderBoard();
         updateUI();
       } else if (data.type === 'MATCH_WON') {
+        const mySavedIdx = gameState.myPlayerIdx;
         gameState = data.state;
+        gameState.myPlayerIdx = mySavedIdx;
         renderBoard();
         updateUI();
         endGame(data.winnerIdx);
@@ -1283,7 +1317,13 @@ function initMultiP2P() {
           updateUI();
         }, 650);
       } else if (data.type === 'SYNC_LOBBY') {
+        const mySavedIdx = gameState.myPlayerIdx;
         gameState.players = data.players;
+        gameState.myPlayerIdx = mySavedIdx;
+        const joinStatus = document.getElementById('joinStatusText');
+        if (joinStatus && data.totalConnected) {
+          joinStatus.textContent = `Connected: ${data.totalConnected} / 4 Players. Waiting for host...`;
+        }
         updateUI();
       }
     }
@@ -1303,7 +1343,7 @@ function resetMatch() {
   // If first turn belongs to a bot, trigger bot turn
   const activeP = gameState.players[gameState.currentTurn];
   if (activeP && activeP.isBot) {
-    setTimeout(handleBotTurn, 900);
+    setTimeout(playBotTurn, 900);
   }
 }
 

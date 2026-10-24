@@ -268,6 +268,37 @@ function lockInPlayerChoice(card, targetId = null, cardEl = null) {
   if (gameState.mode === 'ai') {
     triggerBotDecisions();
     setTimeout(resolveSimultaneousRound, 1200);
+  } else if (gameState.mode === 'p2p' && multiPeer) {
+    // Broadcast my choice
+    if (multiPeer.isHost) {
+      // Host: check if all human players have chosen
+      checkAllPlayersLockedP2P();
+    } else {
+      // Guest: send choice to host
+      multiPeer.send({
+        type: 'PLAYER_LOCKED',
+        playerIdx: gameState.myPlayerIdx,
+        card: card,
+        targetId: targetId
+      });
+    }
+  }
+}
+
+// Host checks if all players are locked in (P2P mode)
+function checkAllPlayersLockedP2P() {
+  if (!multiPeer || !multiPeer.isHost) return;
+  const allHumansLocked = gameState.players.every(p => p.isBot || p.chosenCard !== null);
+  if (allHumansLocked) {
+    // Trigger decisions for any bot fillers
+    triggerBotDecisions();
+    // Broadcast full round resolution to guests
+    setTimeout(() => {
+      resolveSimultaneousRound();
+      if (multiPeer) {
+        multiPeer.broadcast({ type: 'RESOLVE_ROUND', state: gameState });
+      }
+    }, 1000);
   }
 }
 
@@ -639,6 +670,19 @@ document.getElementById('startAIBtn').addEventListener('click', () => {
 // P2P Multiplayer (MultiPeerEngine)
 let multiPeer = null;
 
+let selectedP2PCount = 4;
+document.querySelectorAll('.p2pCountBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.p2pCountBtn').forEach(b => {
+      b.classList.remove('active');
+      b.style.borderColor = 'var(--border-color)';
+    });
+    btn.classList.add('active');
+    btn.style.borderColor = '#fbbf24';
+    selectedP2PCount = parseInt(btn.dataset.count, 10);
+  });
+});
+
 document.getElementById('hostRoomBtn').addEventListener('click', () => {
   const nick = document.getElementById('playerNameInput').value.trim() || 'Mastermind Host';
   gameState.mode = 'p2p';
@@ -646,19 +690,29 @@ document.getElementById('hostRoomBtn').addEventListener('click', () => {
 
   multiPeer = new MultiPeerEngine({
     gamePrefix: 'heistroyale',
+    maxPlayers: selectedP2PCount,
     onStatus: (msg) => {
       const b = document.getElementById('connectedPlayersBadge');
       if (b) b.textContent = msg;
     },
     onPlayerJoin: (client) => {
       showToast("Rogue Infiltrated!", `${client.name || 'Rogue'} joined the heist crew!`, "👋");
+      const b = document.getElementById('connectedPlayersBadge');
+      if (b && multiPeer) {
+        b.textContent = `Connected: ${multiPeer.clientConns.length + 1} / ${selectedP2PCount} Rogues`;
+      }
     },
     onData: (data) => {
-      if (data.type === 'SYNC_STATE') {
-        gameState = data.state;
-        renderSeatsLayout();
-        renderHandCards();
-        updateVaultDisplay();
+      if (data.type === 'PLAYER_LOCKED') {
+        const p = gameState.players[data.playerIdx];
+        if (p) {
+          p.chosenCard = data.card;
+          p.chosenTarget = data.targetId;
+          renderSeatsLayout();
+          // Broadcast to other peers that player is locked
+          multiPeer.broadcast({ type: 'SEAT_LOCKED', playerIdx: data.playerIdx });
+          checkAllPlayersLockedP2P();
+        }
       }
     }
   });
@@ -672,9 +726,28 @@ document.getElementById('hostRoomBtn').addEventListener('click', () => {
 document.getElementById('startMultiplayerBtn').addEventListener('click', () => {
   const nick = document.getElementById('playerNameInput').value.trim() || 'Mastermind Host';
   lobbyModal.style.display = 'none';
-  initGameSession(4, nick);
+
+  // Initialize session for total seats
+  initGameSession(selectedP2PCount, nick);
+
+  // Fill connected human names into game seats, mark remaining as Bots
+  if (multiPeer && multiPeer.clientConns) {
+    multiPeer.clientConns.forEach(c => {
+      if (gameState.players[c.playerIndex]) {
+        gameState.players[c.playerIndex].name = c.name;
+        gameState.players[c.playerIndex].isBot = false;
+      }
+    });
+  }
+
+  renderSeatsLayout();
+  renderHandCards();
+  updateVaultDisplay();
+
+  showToast("Heist Started!", `Infiltrating vault with ${selectedP2PCount} rogues!`, "💎");
+
   if (multiPeer) {
-    multiPeer.broadcast({ type: 'SYNC_STATE', state: gameState });
+    multiPeer.broadcast({ type: 'MATCH_STARTED', state: gameState });
   }
 });
 
@@ -689,15 +762,46 @@ document.getElementById('joinRoomBtn').addEventListener('click', () => {
   multiPeer = new MultiPeerEngine({
     gamePrefix: 'heistroyale',
     onStatus: (msg) => {
-      document.getElementById('joinStatusText').textContent = msg;
+      const el = document.getElementById('joinStatusText');
+      if (el) el.textContent = msg;
     },
     onData: (data) => {
-      if (data.type === 'SYNC_STATE') {
+      if (data.type === '_SYS_ASSIGN_SLOT') {
+        gameState.myPlayerIdx = data.playerIndex;
+        showToast("Rogue Assigned", `You joined as Rogue #${data.playerIndex + 1}!`, "🥷");
+        const statusEl = document.getElementById('joinStatusText');
+        if (statusEl) {
+          statusEl.textContent = `Connected as Rogue #${data.playerIndex + 1} (${data.totalConnected}/${data.maxPlayers}). Waiting for host...`;
+        }
+      } else if (data.type === '_SYS_LOBBY_UPDATE') {
+        const statusEl = document.getElementById('joinStatusText');
+        if (statusEl) {
+          statusEl.textContent = `Connected: ${data.totalConnected} / ${data.maxPlayers} Rogues. Waiting for host...`;
+        }
+      } else if (data.type === 'MATCH_STARTED') {
         lobbyModal.style.display = 'none';
+        const mySavedIdx = gameState.myPlayerIdx;
         gameState = data.state;
+        gameState.myPlayerIdx = mySavedIdx;
+        gameState.mode = 'p2p';
+        showToast("Vault Infiltrated!", "Host started the heist!", "🚀");
         renderSeatsLayout();
         renderHandCards();
         updateVaultDisplay();
+      } else if (data.type === 'SEAT_LOCKED') {
+        const p = gameState.players[data.playerIdx];
+        if (p) {
+          p.chosenCard = { name: 'Ready' };
+          renderSeatsLayout();
+        }
+      } else if (data.type === 'RESOLVE_ROUND') {
+        const mySavedIdx = gameState.myPlayerIdx;
+        gameState = data.state;
+        gameState.myPlayerIdx = mySavedIdx;
+        renderSeatsLayout();
+        renderHandCards();
+        updateVaultDisplay();
+        resolveSimultaneousRound();
       }
     }
   });
