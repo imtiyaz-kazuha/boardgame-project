@@ -417,6 +417,77 @@ function updateCircuitAtmosphere(theme) {
   }
 }
 
+// --- PROCEDURAL ZERO-BANDWIDTH TEXTURE & SHADER GENERATORS ---
+let proceduralAsphaltTexture = null;
+let proceduralCarbonTexture = null;
+let proceduralTireTexture = null;
+
+function generateProceduralAsphaltTexture() {
+  if (proceduralAsphaltTexture) return proceduralAsphaltTexture;
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 512;
+  const ctx = c.getContext('2d');
+
+  // Base asphalt dark tarmac
+  ctx.fillStyle = '#1e2129';
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Micro-aggregate gravel noise (grainy tarmac surface)
+  const imgData = ctx.getImageData(0, 0, 512, 512);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 36;
+    data[i] = Math.min(255, Math.max(0, data[i] + noise));
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise + 2)); // slight slate tint
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Racing line rubbering-in tire streaks down center
+  const rubberGrad = ctx.createLinearGradient(0, 0, 512, 0);
+  rubberGrad.addColorStop(0.0, 'rgba(10, 12, 16, 0.0)');
+  rubberGrad.addColorStop(0.3, 'rgba(12, 14, 18, 0.45)');
+  rubberGrad.addColorStop(0.5, 'rgba(8, 10, 14, 0.65)');
+  rubberGrad.addColorStop(0.7, 'rgba(12, 14, 18, 0.45)');
+  rubberGrad.addColorStop(1.0, 'rgba(10, 12, 16, 0.0)');
+  ctx.fillStyle = rubberGrad;
+  ctx.fillRect(0, 0, 512, 512);
+
+  proceduralAsphaltTexture = new THREE.CanvasTexture(c);
+  proceduralAsphaltTexture.wrapS = THREE.RepeatWrapping;
+  proceduralAsphaltTexture.wrapT = THREE.RepeatWrapping;
+  proceduralAsphaltTexture.repeat.set(1, 40);
+  return proceduralAsphaltTexture;
+}
+
+function generateProceduralCarbonTexture() {
+  if (proceduralCarbonTexture) return proceduralCarbonTexture;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+
+  ctx.fillStyle = '#111317';
+  ctx.fillRect(0, 0, 64, 64);
+
+  // 2x2 Twill Carbon Weave Pattern
+  ctx.fillStyle = '#22262e';
+  for (let y = 0; y < 64; y += 8) {
+    for (let x = 0; x < 64; x += 8) {
+      if ((x + y) % 16 === 0) {
+        ctx.fillRect(x, y, 7, 7);
+      }
+    }
+  }
+
+  proceduralCarbonTexture = new THREE.CanvasTexture(c);
+  proceduralCarbonTexture.wrapS = THREE.RepeatWrapping;
+  proceduralCarbonTexture.wrapT = THREE.RepeatWrapping;
+  proceduralCarbonTexture.repeat.set(8, 8);
+  return proceduralCarbonTexture;
+}
+
 // --- 3. PROCEDURAL BRAKING BOARDS & DRS SIGNS ---
 const signTextures = {};
 function getSignMaterial(label, bgHex) {
@@ -641,7 +712,25 @@ function loadCircuit(circuitKey) {
   aspGeo.setAttribute('position', new THREE.Float32BufferAttribute(asphaltPos, 3));
   aspGeo.setIndex(asphaltIdx);
   aspGeo.computeVertexNormals();
-  const aspMesh = new THREE.Mesh(aspGeo, new THREE.MeshStandardMaterial({ color: 0x242730, roughness: 0.86 }));
+
+  // UV Generation along track spline for seamless realistic asphalt texturing
+  const uvs = [];
+  for (let i = 0; i <= TRACK_SAMPLES; i++) {
+    const v = i / 12; // repeated texture frequency
+    uvs.push(0, v, 1, v);
+  }
+  aspGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+
+  const asphaltTex = generateProceduralAsphaltTexture();
+  const aspMesh = new THREE.Mesh(
+    aspGeo,
+    new THREE.MeshStandardMaterial({
+      map: asphaltTex,
+      color: 0xcccccc,
+      roughness: 0.82,
+      metalness: 0.12
+    })
+  );
   aspMesh.receiveShadow = true;
   circuitGroup.add(aspMesh);
 
@@ -756,20 +845,27 @@ function createGT3CarModel(hexColor) {
   const bodyPivot = new THREE.Group();
   root.add(bodyPivot);
 
+  const carbonTex = generateProceduralCarbonTexture();
+
   const paintMat = new THREE.MeshStandardMaterial({
     color: hexColor,
-    metalness: 0.72,
-    roughness: 0.18
+    metalness: 0.76,
+    roughness: 0.16
   });
   const glassMat = new THREE.MeshPhysicalMaterial({
     color: 0x111c2e,
-    metalness: 0.1,
-    roughness: 0.05,
+    metalness: 0.15,
+    roughness: 0.04,
     transmission: 0.65,
     transparent: true,
     opacity: 0.88
   });
-  const carbonMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.25, roughness: 0.55 });
+  const carbonMat = new THREE.MeshStandardMaterial({
+    map: carbonTex,
+    color: 0x2d3139,
+    metalness: 0.45,
+    roughness: 0.35
+  });
   const grillMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9 });
   const headLightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const ledGlowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
