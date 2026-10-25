@@ -1297,42 +1297,100 @@ const car = {
   bestLapMs: null, lastLapMs: null, passedHalfway: false, lastTrackIdx: 0
 };
 
+// --- MULTI-TOUCH ERGONOMIC INPUT SYSTEM (SUPPORTS MULTIPLE SIMULTANEOUS TOUCHES) ---
 const keys = {};
 const touchState = { gas: 0, brake: 0, left: 0, right: 0, handbrake: 0 };
 let cameraMode = 0;
 
-function bindTouch(btnId, stateProp) {
-  const el = document.getElementById(btnId);
-  if (!el) return;
-  const onDown = (e) => { e.preventDefault(); touchState[stateProp] = 1; };
-  const onUp = (e) => { e.preventDefault(); touchState[stateProp] = 0; };
-  el.addEventListener('touchstart', onDown, { passive: false });
-  el.addEventListener('touchend', onUp, { passive: false });
-  el.addEventListener('touchcancel', onUp, { passive: false });
-  el.addEventListener('mousedown', onDown);
-  el.addEventListener('mouseup', onUp);
-  el.addEventListener('mouseleave', onUp);
-}
-bindTouch('touchGas', 'gas');
-bindTouch('touchBrake', 'brake');
-bindTouch('touchLeft', 'left');
-bindTouch('touchRight', 'right');
-bindTouch('touchHandbrake', 'handbrake');
+// Track active touches by identifier to enable true simultaneous multi-touch
+const activeTouchPoints = new Map();
 
-const touchDrsBtn = document.getElementById('touchDrs');
-if (touchDrsBtn) {
-  touchDrsBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (car.drsAvailable && car.brake < 0.05) car.drsActive = !car.drsActive;
+function setupErgonomicMultiTouch() {
+  const btnMapping = [
+    { id: 'touchGas', prop: 'gas', isToggle: false },
+    { id: 'touchBrake', prop: 'brake', isToggle: false },
+    { id: 'touchLeft', prop: 'left', isToggle: false },
+    { id: 'touchRight', prop: 'right', isToggle: false },
+    { id: 'touchHandbrake', prop: 'handbrake', isToggle: false },
+    {
+      id: 'touchDrs',
+      isToggle: true,
+      onPress: () => {
+        if (car.drsAvailable && car.brake < 0.05) car.drsActive = !car.drsActive;
+      }
+    },
+    {
+      id: 'touchErs',
+      isToggle: true,
+      onPress: () => {
+        if (car.ersBattery > 2) car.ersActive = !car.ersActive;
+      }
+    }
+  ];
+
+  btnMapping.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (!el) return;
+
+    if (item.isToggle) {
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (item.onPress) item.onPress();
+      }, { passive: false });
+
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        if (item.onPress) item.onPress();
+      });
+      return;
+    }
+
+    // Continuous touch buttons (Gas, Brake, Left, Right, Drift)
+    el.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        activeTouchPoints.set(t.identifier, item.prop);
+      }
+      touchState[item.prop] = 1;
+    }, { passive: false });
+
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        activeTouchPoints.delete(t.identifier);
+      }
+      // Re-evaluate if this prop is still held by another finger
+      let stillHeld = false;
+      for (const prop of activeTouchPoints.values()) {
+        if (prop === item.prop) { stillHeld = true; break; }
+      }
+      touchState[item.prop] = stillHeld ? 1 : 0;
+    }, { passive: false });
+
+    el.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        activeTouchPoints.delete(e.changedTouches[i].identifier);
+      }
+      touchState[item.prop] = 0;
+    }, { passive: false });
+
+    // Desktop Mouse Fallback
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      touchState[item.prop] = 1;
+    });
+    el.addEventListener('mouseup', () => { touchState[item.prop] = 0; });
+    el.addEventListener('mouseleave', () => { touchState[item.prop] = 0; });
   });
 }
-const touchErsBtn = document.getElementById('touchErs');
-if (touchErsBtn) {
-  touchErsBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (car.ersBattery > 2) car.ersActive = !car.ersActive;
-  });
-}
+
+setupErgonomicMultiTouch();
 
 window.addEventListener('keydown', (e) => {
   keys[e.code] = true;

@@ -109,12 +109,35 @@ body {
 }
 .shake-impact { animation: impactShake 0.42s ease-out forwards; }
 
-/* Device Visibility Rules */
+/* Device Visibility & Safe Viewport Anchors */
+html, body {
+  height: 100%;
+  height: 100vh;
+  height: 100dvh; /* Dynamic Viewport Height for Mobile/iPad URL bars */
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
 @media (pointer: coarse), (max-width: 1200px) {
-  #mobileControls { display: flex !important; }
+  #mobileControls { 
+    display: flex !important;
+    bottom: env(safe-area-inset-bottom, 8px) !important;
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
+  }
   .desktop-only-panel { display: none !important; }
-  #bottomCluster { transform: scale(0.82); transform-origin: bottom right; right: 8px !important; bottom: 88px !important; }
-  #bottomLeftHud { transform: scale(0.82); transform-origin: bottom left; left: 8px !important; bottom: 88px !important; }
+  #bottomCluster { 
+    transform: scale(0.80); 
+    transform-origin: bottom right; 
+    right: 8px !important; 
+    bottom: calc(105px + env(safe-area-inset-bottom, 0px)) !important; 
+  }
+  #bottomLeftHud { 
+    transform: scale(0.80); 
+    transform-origin: bottom left; 
+    left: 8px !important; 
+    bottom: calc(105px + env(safe-area-inset-bottom, 0px)) !important; 
+  }
 }
 
 @media (min-width: 1201px) and (pointer: fine) {

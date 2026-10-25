@@ -404,32 +404,41 @@
     </div>
   </div>
 
-  <!-- Mobile Touch Controls -->
-  <div id="mobileControls" class="fixed inset-0 pointer-events-none z-30 flex justify-between items-end p-4 pb-5">
-    <div class="flex gap-2.5 pointer-events-auto">
-      <button id="touchLeft" class="touch-btn w-16 h-16 rounded-2xl bg-slate-800/85 border-2 border-slate-600/80 text-white font-black text-2xl flex items-center justify-center shadow-xl backdrop-blur">
+  <!-- Mobile & Tablet Multi-Touch Ergonomic Controls -->
+  <div id="mobileControls" class="fixed inset-x-0 bottom-0 pointer-events-none z-30 flex justify-between items-end px-3 sm:px-6 pb-3">
+    <!-- Left Steering Area -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <button id="touchLeft" class="touch-btn w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-900/90 border-2 border-slate-600/90 text-white font-black text-2xl sm:text-3xl flex items-center justify-center shadow-2xl backdrop-blur active:bg-amber-500/30">
         ◀
       </button>
-      <button id="touchRight" class="touch-btn w-16 h-16 rounded-2xl bg-slate-800/85 border-2 border-slate-600/80 text-white font-black text-2xl flex items-center justify-center shadow-xl backdrop-blur">
+      <button id="touchRight" class="touch-btn w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-900/90 border-2 border-slate-600/90 text-white font-black text-2xl sm:text-3xl flex items-center justify-center shadow-2xl backdrop-blur active:bg-amber-500/30">
         ▶
       </button>
     </div>
 
-    <div class="flex items-end gap-2 pointer-events-auto">
-      <button id="touchErs" class="touch-btn w-12 h-12 rounded-xl bg-cyan-700/85 border border-cyan-400/80 text-white font-black text-[11px] flex items-center justify-center shadow-lg backdrop-blur">
-        ERS
+    <!-- Right Pedal & Boost Controls Area -->
+    <div class="flex items-end gap-2 sm:gap-3 pointer-events-auto">
+      <!-- Tactical Boosts Column (ERS, DRS, Handbrake) -->
+      <div class="flex flex-col gap-1.5 sm:gap-2">
+        <button id="touchErs" class="touch-btn w-14 h-11 sm:w-16 sm:h-12 rounded-xl bg-cyan-900/90 border-2 border-cyan-400 text-cyan-200 font-black text-xs flex items-center justify-center shadow-xl backdrop-blur active:bg-cyan-500">
+          ⚡ ERS
+        </button>
+        <button id="touchDrs" class="touch-btn w-14 h-11 sm:w-16 sm:h-12 rounded-xl bg-emerald-900/90 border-2 border-emerald-400 text-emerald-200 font-black text-xs flex items-center justify-center shadow-xl backdrop-blur active:bg-emerald-500">
+          🚀 DRS
+        </button>
+        <button id="touchHandbrake" class="touch-btn w-14 h-10 sm:w-16 sm:h-11 rounded-xl bg-sky-900/90 border border-sky-400 text-sky-200 font-black text-[11px] flex items-center justify-center shadow-xl backdrop-blur active:bg-sky-500">
+          DRIFT
+        </button>
+      </div>
+
+      <!-- Main Pedals (Brake & Throttle) -->
+      <button id="touchBrake" class="touch-btn w-16 h-20 sm:w-20 sm:h-24 rounded-2xl bg-rose-900/90 border-2 border-rose-500 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center shadow-2xl backdrop-blur active:bg-rose-600">
+        <span class="text-lg">🛑</span>
+        <span>BRAKE</span>
       </button>
-      <button id="touchDrs" class="touch-btn w-12 h-12 rounded-xl bg-emerald-700/85 border border-emerald-400/80 text-white font-black text-[11px] flex items-center justify-center shadow-lg backdrop-blur">
-        DRS
-      </button>
-      <button id="touchHandbrake" class="touch-btn w-12 h-12 rounded-xl bg-sky-600/80 border border-sky-400/70 text-white font-black text-[10px] flex items-center justify-center shadow-lg backdrop-blur">
-        DRIFT
-      </button>
-      <button id="touchBrake" class="touch-btn w-16 h-16 rounded-2xl bg-rose-600/85 border-2 border-rose-400/80 text-white font-black text-xs flex items-center justify-center shadow-xl backdrop-blur">
-        BRAKE
-      </button>
-      <button id="touchGas" class="touch-btn w-16 h-20 rounded-2xl bg-emerald-600/90 border-2 border-emerald-400/80 text-white font-black text-xs flex items-center justify-center shadow-xl backdrop-blur">
-        GAS
+      <button id="touchGas" class="touch-btn w-16 h-24 sm:w-20 sm:h-28 rounded-2xl bg-emerald-800/95 border-2 border-emerald-400 text-white font-black text-xs sm:text-sm flex flex-col items-center justify-center shadow-2xl backdrop-blur active:bg-emerald-500">
+        <span class="text-xl">⚡</span>
+        <span>GAS</span>
       </button>
     </div>
   </div>
