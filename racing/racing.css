@@ -1,0 +1,122 @@
+/* ==========================================================================
+ * IMTI CORSA GT — PROFESSIONAL MOTORSPORT SIMULATOR DESIGN SYSTEM
+ * High-end telemetry, authentic race cockpit HUD, glassmorphism & visual polish
+ * ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@700;900&display=swap');
+
+:root {
+  --sim-bg: #060913;
+  --panel-glass: rgba(11, 17, 33, 0.88);
+  --panel-glass-border: rgba(56, 189, 248, 0.22);
+  --gold-accent: #f59e0b;
+  --gold-glow: rgba(245, 158, 11, 0.45);
+  --emerald-accent: #10b981;
+  --emerald-glow: rgba(16, 185, 129, 0.4);
+  --cyan-accent: #06b6d4;
+  --cyan-glow: rgba(6, 182, 212, 0.4);
+  --rose-accent: #f43f5e;
+  --rose-glow: rgba(244, 63, 94, 0.4);
+  --font-race: 'Orbitron', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--sim-bg);
+  background-image: 
+    radial-gradient(circle at 50% 15%, rgba(56, 189, 248, 0.08) 0%, transparent 55%),
+    radial-gradient(circle at 85% 85%, rgba(245, 158, 11, 0.06) 0%, transparent 45%);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Glassmorphism Race Panels */
+.hud-glass {
+  background: var(--panel-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--panel-glass-border);
+  box-shadow: 0 12px 35px 0 rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.05);
+}
+
+.menu-bg {
+  background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.94), rgba(2, 6, 23, 0.98));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Motorsport Race Numbers & Digital Displays */
+.font-speed {
+  font-family: var(--font-race);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+
+.font-telemetry {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Responsive Touch Button Enhancements */
+.touch-btn {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.06s ease, filter 0.06s ease, box-shadow 0.06s ease;
+}
+
+.touch-btn:active {
+  transform: scale(0.92);
+  filter: brightness(1.3);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+}
+
+/* Pedal Indicator Vertical Fill Glows */
+.pedal-fill {
+  transition: height 0.04s ease-out;
+}
+
+/* Chequered Flag Banner Animation */
+@keyframes bannerDrop {
+  0% { transform: scale(0.7) translateY(-60px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.banner-anim { animation: bannerDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Crash Impact Shake Animation */
+@keyframes impactShake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-8px, 6px) rotate(-1deg); }
+  40% { transform: translate(7px, -6px) rotate(1.2deg); }
+  60% { transform: translate(-5px, 4px) rotate(-0.6deg); }
+  80% { transform: translate(4px, -2px) rotate(0.4deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.shake-impact { animation: impactShake 0.42s ease-out forwards; }
+
+/* Device Visibility Rules */
+@media (pointer: coarse), (max-width: 1200px) {
+  #mobileControls { display: flex !important; }
+  .desktop-only-panel { display: none !important; }
+  #bottomCluster { transform: scale(0.82); transform-origin: bottom right; right: 8px !important; bottom: 88px !important; }
+  #bottomLeftHud { transform: scale(0.82); transform-origin: bottom left; left: 8px !important; bottom: 88px !important; }
+}
+
+@media (min-width: 1201px) and (pointer: fine) {
+  #mobileControls { display: none !important; }
+}

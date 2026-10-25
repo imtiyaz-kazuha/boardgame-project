@@ -5,72 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Imti Corsa GT: Pro Simulator | Imtiboard</title>
   <link rel="stylesheet" href="../shared/common.css" />
+  <link rel="stylesheet" href="racing.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <style>
-    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #090d16;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: none;
-    }
-    #gameCanvas { display: block; width: 100vw; height: 100vh; }
-
-    /* Motorsport HUD Panels */
-    .hud-glass {
-      background: rgba(15, 23, 42, 0.90);
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    }
-    .menu-bg {
-      background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.98));
-      backdrop-filter: blur(14px);
-    }
-
-    /* Tablet & Mobile Touch Controls Visibility: Show whenever touch or mobile/tablet screen */
-    @media (pointer: coarse), (max-width: 1200px) {
-      #mobileControls { display: flex !important; }
-      .desktop-only-panel { display: none !important; }
-      #bottomCluster { transform: scale(0.82); transform-origin: bottom right; right: 8px !important; bottom: 88px !important; }
-      #bottomLeftHud { transform: scale(0.82); transform-origin: bottom left; left: 8px !important; bottom: 88px !important; }
-    }
-
-    @media (min-width: 1201px) and (pointer: fine) {
-      #mobileControls { display: none !important; }
-    }
-
-    .touch-btn {
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      transition: transform 0.06s ease, filter 0.06s ease;
-    }
-    .touch-btn:active {
-      transform: scale(0.92);
-      filter: brightness(1.25);
-    }
-
-    @keyframes bannerDrop {
-      0% { transform: scale(0.7) translateY(-60px); opacity: 0; }
-      100% { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .banner-anim { animation: bannerDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-    @keyframes impactShake {
-      0% { transform: translate(0, 0) rotate(0deg); }
-      20% { transform: translate(-8px, 6px) rotate(-1deg); }
-      40% { transform: translate(7px, -6px) rotate(1.2deg); }
-      60% { transform: translate(-5px, 4px) rotate(-0.6deg); }
-      80% { transform: translate(4px, -2px) rotate(0.4deg); }
-      100% { transform: translate(0, 0) rotate(0deg); }
-    }
-    .shake-impact { animation: impactShake 0.42s ease-out forwards; }
-  </style>
 </head>
 <body class="text-slate-100">
 
@@ -454,15 +391,15 @@
       </div>
 
       <div class="flex flex-col items-center px-2">
-        <span class="text-[9px] uppercase tracking-wider text-slate-400">Gear</span>
-        <div id="gearDisplay" class="text-4xl font-black font-mono text-amber-400 leading-none my-0.5">1</div>
-        <span id="rpmText" class="text-[10px] font-mono text-slate-300">1200 RPM</span>
+        <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Gear</span>
+        <div id="gearDisplay" class="text-4xl font-black font-speed text-amber-400 leading-none my-0.5">1</div>
+        <span id="rpmText" class="text-[10px] font-telemetry text-slate-300">1200 RPM</span>
       </div>
 
-      <div class="text-right font-mono">
-        <div id="speedDisplay" class="text-4xl font-black text-white leading-none">0</div>
-        <div class="text-[10px] text-slate-400">KM/H</div>
-        <div id="aeroDragText" class="text-[9px] text-sky-300 mt-0.5">AERO: NORMAL</div>
+      <div class="text-right">
+        <div id="speedDisplay" class="text-4xl font-black text-white font-speed leading-none">0</div>
+        <div class="text-[10px] font-telemetry text-slate-400 tracking-wider">KM/H</div>
+        <div id="aeroDragText" class="text-[9px] font-bold text-sky-300 mt-0.5">AERO: NORMAL</div>
       </div>
     </div>
   </div>
