@@ -504,12 +504,115 @@ function setupLobbyEvents() {
 
   document.getElementById('startSoloBtn').onclick = () => {
     modal.style.display = 'none';
+    isP2P = false;
+    myPlayerIdx = 0;
     gameState = StellarRules.createInitialGameState(4, 4);
     StellarRules.updateFogOfWar(gameState, myPlayerIdx);
     updateHUD();
     centerCameraOnPlayer(myPlayerIdx);
     showToast("Galaxy Initialized", "Commanding Solarian Concordat vs 3 Rival AI Empires!", "🚀");
   };
+
+  // Host P2P
+  document.getElementById('hostRoomBtn').onclick = () => {
+    isP2P = true;
+    myPlayerIdx = 0;
+    initStellarP2P();
+    const code = peerEngine.initHost();
+    document.getElementById('hostWaitingArea').style.display = 'block';
+    const shareInput = document.getElementById('shareLinkInput');
+    shareInput.value = `${window.location.origin}${window.location.pathname}?room=${code}`;
+  };
+
+  document.getElementById('startMultiBtn').onclick = () => {
+    modal.style.display = 'none';
+    gameState = StellarRules.createInitialGameState(4, 4);
+    // Mark connected human slots
+    if (peerEngine && peerEngine.clientConns) {
+      peerEngine.clientConns.forEach(c => {
+        if (gameState.players[c.playerIndex]) {
+          gameState.players[c.playerIndex].name = c.name;
+          gameState.players[c.playerIndex].isBot = false;
+        }
+      });
+    }
+    StellarRules.updateFogOfWar(gameState, myPlayerIdx);
+    updateHUD();
+    centerCameraOnPlayer(myPlayerIdx);
+    if (peerEngine) {
+      peerEngine.broadcast({ type: 'MATCH_STARTED', state: gameState });
+    }
+    showToast("Galactic War Begun!", "Multiplayer match active across star sectors!", "🚀");
+  };
+
+  // Join P2P
+  document.getElementById('connectRoomBtn').onclick = () => {
+    const code = document.getElementById('joinRoomInput').value.trim();
+    if (!code) {
+      alert("Please enter a room code!");
+      return;
+    }
+    isP2P = true;
+    initStellarP2P();
+    peerEngine.initJoin(code, 'Admiral');
+  };
+}
+
+function initStellarP2P() {
+  if (peerEngine) peerEngine.destroy();
+
+  const modal = document.getElementById('lobbyModal');
+
+  peerEngine = new MultiPeerEngine({
+    gamePrefix: 'stellar',
+    maxPlayers: 4,
+    onStatus: (msg) => {
+      const el = document.getElementById('joinStatusText');
+      if (el) el.textContent = msg;
+      const hostWaiting = document.getElementById('connectedBadge');
+      if (hostWaiting && peerEngine.isHost) {
+        hostWaiting.textContent = `Connected: ${peerEngine.clientConns.length + 1} / 4 Admirals`;
+      }
+    },
+    onPlayerJoined: (client) => {
+      showToast("Admiral Connected", `${client.name} entered the Galactic Command Nexus!`, "👋");
+      const hostWaiting = document.getElementById('connectedBadge');
+      if (hostWaiting) {
+        hostWaiting.textContent = `Connected: ${peerEngine.clientConns.length + 1} / 4 Admirals`;
+      }
+    },
+    onData: (data) => {
+      if (data.type === '_SYS_ASSIGN_SLOT') {
+        myPlayerIdx = data.playerIndex;
+        const fMeta = FACTIONS[data.playerIndex];
+        showToast("Assigned Faction", `Commanding the ${fMeta.name}!`, "🪐");
+        const statusEl = document.getElementById('joinStatusText');
+        if (statusEl) {
+          statusEl.textContent = `Connected as ${fMeta.name} (${data.totalConnected}/${data.maxPlayers}). Waiting for host...`;
+        }
+      } else if (data.type === '_SYS_LOBBY_UPDATE') {
+        const statusEl = document.getElementById('joinStatusText');
+        if (statusEl) {
+          statusEl.textContent = `Connected: ${data.totalConnected} / ${data.maxPlayers} Admirals. Waiting for host...`;
+        }
+      } else if (data.type === 'MATCH_STARTED') {
+        modal.style.display = 'none';
+        const savedIdx = myPlayerIdx;
+        gameState = data.state;
+        myPlayerIdx = savedIdx;
+        StellarRules.updateFogOfWar(gameState, myPlayerIdx);
+        updateHUD();
+        centerCameraOnPlayer(myPlayerIdx);
+        showToast("Galaxy Unveiled", "The host has initiated the galactic war!", "🚀");
+      } else if (data.type === 'SYNC_STATE') {
+        const savedIdx = myPlayerIdx;
+        gameState = data.state;
+        myPlayerIdx = savedIdx;
+        StellarRules.updateFogOfWar(gameState, myPlayerIdx);
+        updateHUD();
+      }
+    }
+  });
 }
 
 // Final Game Over Score Calculation & Discord Webhook
