@@ -129,6 +129,102 @@ let targetRaceLaps = 3;
 let isRaceFinished = false;
 let raceStartTime = performance.now();
 
+// Graphics Profile & Adaptive Performance Engine
+let currentGraphicsTier = 'auto'; // 'auto', 'ultra', 'medium', 'low'
+let activeEffectiveTier = 'medium';
+let isWeakDevice = false;
+
+function detectHardwareProfile() {
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  let gpuString = 'Generic GPU';
+  if (gl) {
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    if (debugInfo) {
+      gpuString = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'Unknown GPU';
+    }
+  }
+
+  const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
+  const memoryGB = navigator.deviceMemory || 4;
+  const cpuCores = navigator.hardwareConcurrency || 4;
+
+  const lowEndGpuPatterns = /Mali-4|Mali-T|Adreno 3|Adreno 505|Adreno 506|Intel HD Graphics|PowerVR/i;
+  const isWeakGPU = lowEndGpuPatterns.test(gpuString);
+
+  if (isWeakGPU || memoryGB < 3 || cpuCores <= 2 || (isMobileOrTablet && memoryGB <= 4)) {
+    isWeakDevice = true;
+    activeEffectiveTier = 'low';
+  } else if (!isMobileOrTablet && memoryGB >= 8 && cpuCores >= 6) {
+    activeEffectiveTier = 'ultra';
+  } else {
+    activeEffectiveTier = 'medium';
+  }
+
+  const badge = document.getElementById('detectedGpuBadge');
+  if (badge) {
+    badge.textContent = isWeakDevice ? '⚡ WEAK MOBILE DETECTED' : '✓ STABLE HARDWARE';
+    badge.className = isWeakDevice 
+      ? 'text-[10px] font-mono text-amber-300 bg-amber-500/15 border border-amber-500/40 px-2 py-0.5 rounded-full'
+      : 'text-[10px] font-mono text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full';
+  }
+}
+
+function applyGraphicsTier(tier) {
+  currentGraphicsTier = tier;
+  let effective = (tier === 'auto') ? activeEffectiveTier : tier;
+
+  if (effective === 'low') {
+    renderer.setPixelRatio(0.75); // Lower pixel fill rate for weak phones
+    renderer.antialias = false;
+    scene.fog.density = 0.00035;
+    if (environmentPropsGroup) environmentPropsGroup.visible = false; // Hide 160 scenery meshes to preserve 60FPS on weak phones
+  } else if (effective === 'medium') {
+    renderer.setPixelRatio(1.0);
+    scene.fog.density = 0.00055;
+    if (environmentPropsGroup) environmentPropsGroup.visible = true;
+  } else if (effective === 'ultra') {
+    const dpr = Math.min(window.devicePixelRatio || 1.0, 1.5);
+    renderer.setPixelRatio(dpr);
+    scene.fog.density = 0.00065;
+    if (environmentPropsGroup) environmentPropsGroup.visible = true;
+  }
+
+  const quickBtn = document.getElementById('graphicsQuickBtn');
+  if (quickBtn) quickBtn.textContent = `⚡ GFX: ${effective.toUpperCase()}`;
+
+  const valQuick = document.getElementById('valGfxQuick');
+  if (valQuick) valQuick.textContent = `${tier.toUpperCase()} (${effective.toUpperCase()})`;
+
+  const menuTierSelect = document.getElementById('menuGraphicsTier');
+  if (menuTierSelect && menuTierSelect.value !== tier) menuTierSelect.value = tier;
+}
+
+// Adaptive Runtime Frame-Time Auto-Scaling
+let frameCounter = 0;
+let frameTimeAccum = 0;
+
+function evaluateAdaptivePerformance(dt) {
+  if (currentGraphicsTier !== 'auto') return;
+  frameCounter++;
+  frameTimeAccum += dt;
+
+  // Check every 90 frames (~1.5 seconds)
+  if (frameCounter >= 90) {
+    const avgFps = frameCounter / frameTimeAccum;
+    if (avgFps < 32 && activeEffectiveTier !== 'low') {
+      // Detected lag or frame drop below 32 FPS -> Drop down to performance mode!
+      activeEffectiveTier = 'low';
+      applyGraphicsTier('auto');
+    } else if (avgFps > 57 && isWeakDevice === false && activeEffectiveTier === 'medium') {
+      // Very smooth performance -> elevate to ultra
+      activeEffectiveTier = 'ultra';
+      applyGraphicsTier('auto');
+    }
+    frameCounter = 0;
+    frameTimeAccum = 0;
+  }
+}
+
 // --- 2. THREE.JS SCENE, SKY DOME, SUN HALO & SCENERY ---
 const canvas = document.getElementById('gameCanvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -2000,13 +2096,36 @@ document.getElementById('setupSusp').addEventListener('input', (e) => {
   document.getElementById('valSusp').textContent = `${car.suspStiffness} kN/m`;
 });
 
+document.querySelectorAll('.gfx-pick-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    applyGraphicsTier(btn.dataset.tier);
+  });
+});
+
+const gfxSelect = document.getElementById('menuGraphicsTier');
+if (gfxSelect) {
+  gfxSelect.addEventListener('change', (e) => {
+    applyGraphicsTier(e.target.value);
+  });
+}
+
+const quickGfxBtn = document.getElementById('graphicsQuickBtn');
+if (quickGfxBtn) {
+  quickGfxBtn.addEventListener('click', () => {
+    const cycle = { 'auto': 'low', 'low': 'medium', 'medium': 'ultra', 'ultra': 'auto' };
+    applyGraphicsTier(cycle[currentGraphicsTier] || 'auto');
+  });
+}
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Start Simulation
+// Start Simulation & Detect Hardware Tier
+detectHardwareProfile();
+applyGraphicsTier('auto');
 loadCircuit('solaris');
 resetCarToStart();
 spawnAiGrid(5);
@@ -2016,6 +2135,8 @@ function animate(now) {
   requestAnimationFrame(animate);
   const dt = Math.min((now - lastTime) / 1000, 0.04);
   lastTime = now;
+
+  evaluateAdaptivePerformance(dt);
 
   if (!isMenuOpen && !isRaceFinished) {
     if (isPitFreezing) {
