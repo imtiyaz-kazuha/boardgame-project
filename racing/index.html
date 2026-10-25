@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Imti Corsa GT: Pro Simulator | Imtiboard</title>
+  <link rel="stylesheet" href="../shared/common.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #090d16;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; }
+
+    /* Motorsport HUD Panels */
+    .hud-glass {
+      background: rgba(15, 23, 42, 0.90);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
+    .menu-bg {
+      background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.98));
+      backdrop-filter: blur(14px);
+    }
+
+    @media (min-width: 1024px) {
+      #mobileControls { display: none !important; }
+    }
+
+    @media (max-width: 1023px) {
+      .desktop-only-panel { display: none !important; }
+      #bottomCluster { transform: scale(0.85); transform-origin: bottom right; right: 10px !important; bottom: 95px !important; }
+      #bottomLeftHud { transform: scale(0.85); transform-origin: bottom left; left: 10px !important; bottom: 95px !important; }
+    }
+
+    .touch-btn {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.06s ease, filter 0.06s ease;
+    }
+    .touch-btn:active {
+      transform: scale(0.92);
+      filter: brightness(1.25);
+    }
+
+    @keyframes bannerDrop {
+      0% { transform: scale(0.7) translateY(-60px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .banner-anim { animation: bannerDrop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    @keyframes impactShake {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      20% { transform: translate(-8px, 6px) rotate(-1deg); }
+      40% { transform: translate(7px, -6px) rotate(1.2deg); }
+      60% { transform: translate(-5px, 4px) rotate(-0.6deg); }
+      80% { transform: translate(4px, -2px) rotate(0.4deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+    .shake-impact { animation: impactShake 0.42s ease-out forwards; }
+  </style>
+</head>
+<body class="text-slate-100">
+
+  <!-- 3D WebGL Viewport -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Hub Back Floating Anchor -->
+  <a href="../home/index.html" class="fixed top-3 left-3 z-30 hud-glass hover:bg-slate-800/90 text-slate-300 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 pointer-events-auto">
+    <span>‹</span> Hub
+  </a>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN MENU MODAL (RACE CONFIGURATION & LAPS SELECTOR)                  -->
+  <!-- ===================================================================== -->
+  <div id="mainMenuOverlay" class="fixed inset-0 menu-bg z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="max-w-3xl w-full bg-slate-900/95 border border-slate-700/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-2xl my-auto">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-5">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider mb-1.5">
+            🏎️ Non-Boardgame Simulation Zone
+          </div>
+          <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white">IMTI CORSA GT</h1>
+          <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+            Championship GT3 Simulation • iRacing / Assetto Corsa Pace Dynamics • Active DRS Surge & ERS Hybrid
+          </p>
+        </div>
+        <div class="text-right font-mono text-xs text-slate-400 space-y-1">
+          <div>PHYSICS: <span class="text-emerald-400 font-bold">GT3 TELEMETRY SIM</span></div>
+          <div>AI GRID: <span class="text-amber-400 font-bold">APEX TRACKING</span></div>
+          <div>MOMENTUM: <span class="text-sky-300 font-bold">-55% AERO DRAG DRS</span></div>
+        </div>
+      </div>
+
+      <!-- Menu Configuration Form -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 mb-5">
+        <div class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">1. Grand Prix Circuit</label>
+            <select id="menuCircuitSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-amber-400">
+              <option value="solaris" selected>🏁 Solaris International (14 Turns • 2 DRS Zones) [VERIFIED STABLE]</option>
+              <option value="monza">⚠️ [UNSTABLE] Monza Speed Temple (800m Straight • Chicanes)</option>
+              <option value="spa">⚠️ [UNSTABLE] Circuit de Spa-Francorchamps (Eau Rouge & Kemmel)</option>
+              <option value="silverstone">⚠️ [UNSTABLE] Silverstone GP (Maggotts, Becketts & Stowe)</option>
+              <option value="suzuka">⚠️ [UNSTABLE] Suzuka Circuit (Figure-8 • Esses • 130R)</option>
+              <option value="nurburgring">⚠️ [UNSTABLE] Nürburgring GP (Dunlop Hairpin & Schumacher S)</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">2. Total Race Laps</label>
+              <select id="menuRaceLaps" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white">
+                <option value="1">1 Lap (Sprint Shootout)</option>
+                <option value="3" selected>3 Laps (Championship)</option>
+                <option value="5">5 Laps (Feature Race)</option>
+                <option value="10">10 Laps (Endurance)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">3. AI Difficulty / Skill</label>
+              <select id="menuAiSkill" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white">
+                <option value="0.90">Clubman (90%)</option>
+                <option value="1.00" selected>Pro GT3 (100% Late-Brake)</option>
+                <option value="1.08">Alien (108% Hyper Aggressive)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3.5">
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">4. AI Grid Size</label>
+              <select id="menuAiCount" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
+                <option value="0">0 (Solo Hotlap)</option>
+                <option value="3">3 Opponents</option>
+                <option value="5" selected>5 Opponents</option>
+                <option value="7">7 Opponents (Full Grid)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">5. Tire Compound</label>
+              <select id="menuCompound" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
+                <option value="soft" selected>🔴 Soft Slick (Max Grip)</option>
+                <option value="medium">🟡 Medium Slick</option>
+                <option value="hard">⚪ Hard Slick</option>
+                <option value="drift">🟣 Drift Spec</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">6. 3D Racing Line</label>
+              <select id="menuRacingLine" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
+                <option value="on">🟢 Line Enabled (On)</option>
+                <option value="off" selected>⚪ Authentic Line (Off)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">7. Damage Realism</label>
+              <select id="menuDamageMode" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
+                <option value="simulation" selected>💥 Sim Damage & Engine Stall</option>
+                <option value="arcade">🛡️ Arcade (Visual Only)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-3 text-xs space-y-1.5">
+            <div class="font-bold text-amber-400 uppercase tracking-wider text-[11px]">Controls & Telemetry Guide</div>
+            <div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-slate-300 text-[11px]">
+              <div><strong>W / S</strong> : Throttle / Brake</div>
+              <div><strong>A / D</strong> : Steering</div>
+              <div><strong>X or Shift</strong> : Active DRS Wing</div>
+              <div><strong>B or E</strong> : ERS Hybrid Deployment</div>
+              <div><strong>Space</strong> : Handbrake</div>
+              <div><strong>C / R</strong> : Cam / Pit Service</div>
+              <div><strong>Esc / Menu</strong> : Pause & Settings</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div class="text-xs text-slate-400">
+          🏁 <strong>Race to the Flag:</strong> Complete all laps in first position to take the chequered flag victory!
+        </div>
+        <div class="flex items-center gap-2.5 ml-auto">
+          <button id="resumeRaceBtn" class="hidden px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm transition">
+            Resume
+          </button>
+          <button id="startRaceBtn" class="px-6 py-2.5 sm:px-7 sm:py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm tracking-wide shadow-xl shadow-amber-500/25 transition">
+            🏁 START CHAMPIONSHIP RACE →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Engine Stall Banner -->
+  <div id="engineStallBanner" class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-40 bg-red-950/90 border-2 border-red-500 text-red-200 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+    <span class="text-2xl">⚠️</span>
+    <div>
+      <div class="font-black text-sm uppercase">CATASTROPHIC ENGINE FAILURE</div>
+      <div class="text-xs text-red-300">Engine stalled due to heavy impact. Press <strong>R</strong> for Pit Crew Service.</div>
+    </div>
+    <button id="repairEngineBtn" class="ml-2 px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shadow">
+      🔧 Service (R)
+    </button>
+  </div>
+
+  <!-- Chequered Flag Finish Modal Overlay -->
+  <div id="chequeredModal" class="hidden fixed inset-0 menu-bg z-50 flex items-center justify-center p-4">
+    <div class="banner-anim max-w-lg w-full bg-slate-900 border-2 border-amber-500/70 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
+      <div class="w-full h-4 bg-[repeating-linear-gradient(45deg,#fff,#fff_12px,#000_12px,#000_24px)] rounded-t-xl mb-4"></div>
+      <div class="text-5xl mb-2">🏁</div>
+      <h2 id="finishTitle" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-tight mb-1">
+        CHEQUERED FLAG!
+      </h2>
+      <div id="finishSubtitle" class="text-lg font-bold text-white mb-4">
+        YOU FINISHED P1 — VICTORY!
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 mb-6 font-mono text-sm space-y-2">
+        <div class="flex justify-between border-b border-slate-800 pb-2">
+          <span class="text-slate-400">FINAL POSITION:</span>
+          <span id="finishPosition" class="font-black text-amber-400 text-base">P1 / 6</span>
+        </div>
+        <div class="flex justify-between border-b border-slate-800 pb-2">
+          <span class="text-slate-400">TOTAL RACE TIME:</span>
+          <span id="finishTotalTime" class="font-bold text-white">03:45.120</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">FASTEST LAP:</span>
+          <span id="finishBestLap" class="font-bold text-emerald-400">01:12.430</span>
+        </div>
+      </div>
+
+      <div class="flex gap-3 justify-center">
+        <button id="finishRestartBtn" class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm tracking-wide shadow-lg transition">
+          ↺ RACE AGAIN
+        </button>
+        <button id="finishMenuBtn" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition">
+          ☰ MAIN MENU
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen Crash Impact Flash Overlay -->
+  <div id="crashOverlay" class="pointer-events-none fixed inset-0 bg-red-600/0 z-40 transition-colors duration-150"></div>
+
+  <!-- 5-Second Pit Repair Freeze Overlay -->
+  <div id="pitFreezeOverlay" class="hidden fixed inset-0 z-50 pointer-events-none flex flex-col items-center justify-center bg-slate-950/60 backdrop-blur-sm">
+    <div class="hud-glass border-2 border-amber-500/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl max-w-sm w-full mx-4 animate-pulse">
+      <div class="text-4xl sm:text-5xl mb-2">🔧</div>
+      <h3 class="text-xl sm:text-2xl font-black text-amber-400 tracking-tight uppercase mb-1">PIT CREW REPAIR</h3>
+      <p class="text-xs text-slate-300 mb-4">Servicing chassis, resetting aero & restart engine</p>
+      
+      <div class="flex items-center justify-center gap-2 mb-3">
+        <span class="text-xs font-mono text-slate-400 uppercase font-bold">RELEASE IN</span>
+        <span id="pitTimerCount" class="font-mono text-3xl font-black text-white">5.0s</span>
+      </div>
+
+      <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+        <div id="pitTimerBar" class="h-full bg-amber-400 transition-all duration-75" style="width: 100%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top HUD Bar -->
+  <div class="fixed top-3 left-20 right-3 flex items-center justify-between pointer-events-none z-20">
+    <!-- Left Timing & Standings -->
+    <div class="hud-glass rounded-xl px-3.5 py-1.5 flex items-center gap-3 pointer-events-auto">
+      <button id="openMenuBtn" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition">
+        ☰ Menu (Esc)
+      </button>
+
+      <div class="flex items-center gap-2">
+        <div class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-0.5 text-center">
+          <div class="text-[8px] text-slate-400 uppercase font-bold">POS</div>
+          <div id="racePosDisplay" class="font-mono text-xs sm:text-sm font-black text-amber-400">P1/6</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-0.5 text-center">
+          <div class="text-[8px] text-slate-400 uppercase font-bold">LAP</div>
+          <div id="lapCountDisplay" class="font-mono text-xs sm:text-sm font-black text-white">1 / 3</div>
+        </div>
+      </div>
+
+      <div class="h-6 w-px bg-slate-700 hidden sm:block"></div>
+
+      <div class="font-mono text-xs space-y-0.5">
+        <div>TIME: <span id="currentLapTime" class="text-white font-bold">00:00.000</span></div>
+        <div class="hidden sm:block">BEST: <span id="bestLapTime" class="text-emerald-400 font-bold">--:--.---</span></div>
+      </div>
+    </div>
+
+    <!-- Right Quick Toggles -->
+    <div class="flex items-center gap-1.5 pointer-events-auto">
+      <button id="racingLineBtn" class="hidden sm:inline-flex hud-glass hover:bg-slate-800 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 transition">
+        📏 Line (L)
+      </button>
+      <button id="cameraBtn" class="hud-glass hover:bg-slate-800 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+        🎥 Cam (C)
+      </button>
+      <button id="audioBtn" class="hud-glass hover:bg-slate-800 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-300 transition">
+        🔊 Sound: OFF
+      </button>
+      <button id="resetCarBtn" class="hud-glass hover:bg-slate-800 px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-300 transition">
+        ↺ Reset (R)
+      </button>
+      <button id="setupToggleBtn" class="hidden sm:inline-flex bg-amber-500 hover:bg-amber-400 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-lg transition">
+        🔧 Setup (Tab)
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom-Left HUD -->
+  <div id="bottomLeftHud" class="fixed bottom-4 left-4 flex items-end gap-3 pointer-events-none z-20">
+    <div class="desktop-only-panel hud-glass rounded-2xl p-3 w-52">
+      <div class="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase mb-1.5">
+        <span>Tyres & Slip</span>
+        <span id="compoundBadge" class="text-rose-400 font-bold">SOFT</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 font-mono text-[11px]">
+        <div class="bg-slate-900/90 border border-slate-700 rounded-lg p-1.5 flex justify-between items-center">
+          <div><div class="text-[9px] text-slate-400">FL</div><div id="flTemp" class="text-emerald-400 font-bold">82°C</div></div>
+          <div class="w-2 h-7 bg-slate-800 rounded overflow-hidden flex items-end"><div id="flSlipBar" class="w-full bg-emerald-400" style="height: 15%"></div></div>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-700 rounded-lg p-1.5 flex justify-between items-center">
+          <div class="w-2 h-7 bg-slate-800 rounded overflow-hidden flex items-end"><div id="frSlipBar" class="w-full bg-emerald-400" style="height: 15%"></div></div>
+          <div class="text-right"><div class="text-[9px] text-slate-400">FR</div><div id="frTemp" class="text-emerald-400 font-bold">82°C</div></div>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-700 rounded-lg p-1.5 flex justify-between items-center">
+          <div><div class="text-[9px] text-slate-400">RL</div><div id="rlTemp" class="text-emerald-400 font-bold">84°C</div></div>
+          <div class="w-2 h-7 bg-slate-800 rounded overflow-hidden flex items-end"><div id="rlSlipBar" class="w-full bg-emerald-400" style="height: 15%"></div></div>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-700 rounded-lg p-1.5 flex justify-between items-center">
+          <div class="w-2 h-7 bg-slate-800 rounded overflow-hidden flex items-end"><div id="rrSlipBar" class="w-full bg-emerald-400" style="height: 15%"></div></div>
+          <div class="text-right"><div class="text-[9px] text-slate-400">RR</div><div id="rrTemp" class="text-emerald-400 font-bold">84°C</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- G-Force Meter -->
+    <div class="desktop-only-panel hud-glass rounded-2xl p-2.5 flex flex-col items-center">
+      <div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">G-Force</div>
+      <canvas id="gForceCanvas" width="80" height="80" class="rounded-full bg-slate-950/90 border border-slate-700"></canvas>
+      <div id="gForceText" class="text-[10px] font-mono text-amber-300 mt-1">0.0G | 0.0G</div>
+    </div>
+
+    <!-- Track Minimap -->
+    <div class="hud-glass rounded-2xl p-2.5 flex flex-col items-center">
+      <div id="minimapTitle" class="text-[10px] text-slate-400 uppercase font-semibold mb-1">Solaris GP</div>
+      <canvas id="minimapCanvas" width="105" height="88" class="rounded-lg bg-slate-950/80 border border-slate-800"></canvas>
+      <div class="text-[9px] font-mono text-slate-400 mt-1">🟡 You • 🔵 AI</div>
+    </div>
+  </div>
+
+  <!-- Bottom-Right HUD: Telemetry & DRS -->
+  <div id="bottomCluster" class="fixed bottom-4 right-4 hud-glass rounded-2xl p-3.5 w-72 sm:w-80 pointer-events-none z-20">
+    <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden mb-1.5 border border-slate-700 p-0.5">
+      <div id="rpmBar" class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 transition-all" style="width: 15%"></div>
+    </div>
+
+    <div class="mb-2 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 space-y-1">
+      <div class="flex items-center justify-between text-[9px] font-mono">
+        <span class="text-slate-400 uppercase font-bold">CHASSIS & ENGINE</span>
+        <span id="carDamageStatus" class="text-emerald-400 font-bold">100% HEALTH</span>
+      </div>
+      <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div id="damageHealthFill" class="h-full bg-emerald-400 transition-all duration-150" style="width: 100%"></div>
+      </div>
+    </div>
+
+    <div class="mb-2 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[9px] font-mono uppercase tracking-wider text-slate-400">DRS (X / Shift)</span>
+        <span id="drsBadge" class="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-slate-800 text-slate-500">DRS LOCKED</span>
+      </div>
+      <div class="flex items-center justify-between text-[9px] font-mono text-slate-400 border-t border-slate-800/80 pt-1">
+        <span>DRS GAP (LEAD CAR):</span>
+        <span id="drsGapText" class="font-bold text-slate-400">NO CAR AHEAD</span>
+      </div>
+    </div>
+
+    <div class="mb-2 bg-slate-900/90 border border-slate-700 rounded-lg px-2.5 py-1.5 space-y-1">
+      <div class="flex items-center justify-between text-[9px] font-mono">
+        <span class="text-slate-400 uppercase font-bold">ERS HYBRID (B / E)</span>
+        <span id="ersStatusText" class="text-cyan-400 font-bold">100% READY</span>
+      </div>
+      <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/80">
+        <div id="ersBatteryFill" class="h-full bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 transition-all duration-75" style="width: 100%"></div>
+      </div>
+      <div class="flex justify-between items-center text-[8px] font-mono text-slate-400">
+        <span id="ersModeText">HARVESTING ON BRAKE</span>
+        <span id="ersPowerText" class="text-cyan-300 font-bold">+160 BHP</span>
+      </div>
+    </div>
+
+    <!-- Pedals + Gear + Speedometer -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-end gap-1.5 h-16">
+        <div class="flex flex-col items-center">
+          <div class="w-3 h-12 bg-slate-900 rounded overflow-hidden flex items-end border border-slate-700">
+            <div id="hbBar" class="w-full bg-sky-400" style="height: 0%"></div>
+          </div>
+          <span class="text-[8px] font-mono text-slate-400 mt-0.5">HB</span>
+        </div>
+        <div class="flex flex-col items-center">
+          <div class="w-3 h-12 bg-slate-900 rounded overflow-hidden flex items-end border border-slate-700">
+            <div id="brakeBar" class="w-full bg-rose-500" style="height: 0%"></div>
+          </div>
+          <span class="text-[8px] font-mono text-slate-400 mt-0.5">BRK</span>
+        </div>
+        <div class="flex flex-col items-center">
+          <div class="w-3 h-12 bg-slate-900 rounded overflow-hidden flex items-end border border-slate-700">
+            <div id="throttleBar" class="w-full bg-emerald-400" style="height: 0%"></div>
+          </div>
+          <span class="text-[8px] font-mono text-slate-400 mt-0.5">THR</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col items-center px-2">
+        <span class="text-[9px] uppercase tracking-wider text-slate-400">Gear</span>
+        <div id="gearDisplay" class="text-4xl font-black font-mono text-amber-400 leading-none my-0.5">1</div>
+        <span id="rpmText" class="text-[10px] font-mono text-slate-300">1200 RPM</span>
+      </div>
+
+      <div class="text-right font-mono">
+        <div id="speedDisplay" class="text-4xl font-black text-white leading-none">0</div>
+        <div class="text-[10px] text-slate-400">KM/H</div>
+        <div id="aeroDragText" class="text-[9px] text-sky-300 mt-0.5">AERO: NORMAL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Touch Controls -->
+  <div id="mobileControls" class="fixed inset-0 pointer-events-none z-30 flex justify-between items-end p-4 pb-5">
+    <div class="flex gap-2.5 pointer-events-auto">
+      <button id="touchLeft" class="touch-btn w-16 h-16 rounded-2xl bg-slate-800/85 border-2 border-slate-600/80 text-white font-black text-2xl flex items-center justify-center shadow-xl backdrop-blur">
+        ◀
+      </button>
+      <button id="touchRight" class="touch-btn w-16 h-16 rounded-2xl bg-slate-800/85 border-2 border-slate-600/80 text-white font-black text-2xl flex items-center justify-center shadow-xl backdrop-blur">
+        ▶
+      </button>
+    </div>
+
+    <div class="flex items-end gap-2 pointer-events-auto">
+      <button id="touchErs" class="touch-btn w-12 h-12 rounded-xl bg-cyan-700/85 border border-cyan-400/80 text-white font-black text-[11px] flex items-center justify-center shadow-lg backdrop-blur">
+        ERS
+      </button>
+      <button id="touchDrs" class="touch-btn w-12 h-12 rounded-xl bg-emerald-700/85 border border-emerald-400/80 text-white font-black text-[11px] flex items-center justify-center shadow-lg backdrop-blur">
+        DRS
+      </button>
+      <button id="touchHandbrake" class="touch-btn w-12 h-12 rounded-xl bg-sky-600/80 border border-sky-400/70 text-white font-black text-[10px] flex items-center justify-center shadow-lg backdrop-blur">
+        DRIFT
+      </button>
+      <button id="touchBrake" class="touch-btn w-16 h-16 rounded-2xl bg-rose-600/85 border-2 border-rose-400/80 text-white font-black text-xs flex items-center justify-center shadow-xl backdrop-blur">
+        BRAKE
+      </button>
+      <button id="touchGas" class="touch-btn w-16 h-20 rounded-2xl bg-emerald-600/90 border-2 border-emerald-400/80 text-white font-black text-xs flex items-center justify-center shadow-xl backdrop-blur">
+        GAS
+      </button>
+    </div>
+  </div>
+
+  <!-- Garage Setup Modal -->
+  <div id="garageModal" class="hidden fixed top-16 right-4 hud-glass rounded-2xl p-4 w-80 z-40 shadow-2xl">
+    <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-2.5">
+      <div>
+        <h2 class="font-bold text-xs text-white">🔧 Pit Garage Setup</h2>
+        <p class="text-[10px] text-slate-400">Chassis, Steering & Wing Trim</p>
+      </div>
+      <button id="closeGarageBtn" class="text-xs text-slate-400 hover:text-white px-2 py-1">✕</button>
+    </div>
+    <div class="space-y-2.5 text-[11px]">
+      <div>
+        <label class="flex justify-between text-slate-300 mb-0.5">
+          <span>Steering Turn-In Sharpness</span>
+          <span id="valSteerLock" class="font-mono text-emerald-300">100%</span>
+        </label>
+        <input id="setupSteerLock" type="range" min="70" max="135" step="5" value="100" class="w-full accent-amber-400" />
+      </div>
+      <div>
+        <label class="flex justify-between text-slate-300 mb-0.5">
+          <span>Keyboard Trail-Brake Assist</span>
+          <span id="valTrailAssist" class="font-mono text-sky-300">85%</span>
+        </label>
+        <input id="setupTrailAssist" type="range" min="0" max="100" step="5" value="85" class="w-full accent-amber-400" />
+      </div>
+      <div>
+        <label class="flex justify-between text-slate-300 mb-0.5">
+          <span>Aero Wing Level</span>
+          <span id="valWing" class="font-mono text-amber-300">8 (High Grip)</span>
+        </label>
+        <input id="setupWing" type="range" min="1" max="12" step="1" value="8" class="w-full accent-amber-400" />
+      </div>
+      <div>
+        <label class="flex justify-between text-slate-300 mb-0.5">
+          <span>Anti-Roll Bar Stiffness</span>
+          <span id="valSusp" class="font-mono text-amber-300">100 kN/m</span>
+        </label>
+        <input id="setupSusp" type="range" min="60" max="160" step="10" value="100" class="w-full accent-amber-400" />
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/discord-webhook.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
