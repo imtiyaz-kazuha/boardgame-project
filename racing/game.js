@@ -1006,24 +1006,111 @@ function updateSmokePuffs(dt) {
   }
 }
 
+// --- TITANIUM SKID-BLOCK BOTTOMING OUT SPARKS PARTICLES ---
+const sparkParticles = [];
+const sparkGeo = new THREE.BoxGeometry(0.06, 0.04, 0.14);
+const sparkMatYellow = new THREE.MeshBasicMaterial({ color: 0xffea00 });
+const sparkMatOrange = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+const sparkMatWhite  = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+function spawnFloorSparks(x, y, z, carYaw, carVx, carVz, count = 5) {
+  const sinY = Math.sin(carYaw);
+  const cosY = Math.cos(carYaw);
+  
+  for (let i = 0; i < count; i++) {
+    const rMat = Math.random() < 0.5 ? sparkMatYellow : (Math.random() < 0.8 ? sparkMatOrange : sparkMatWhite);
+    const mesh = new THREE.Mesh(sparkGeo, rMat);
+    
+    // Spawn under rear skid plank / diffuser
+    const lateralJitter = (Math.random() - 0.5) * 0.8;
+    const rearOffset = -1.25 - Math.random() * 0.5;
+    const px = x + (-cosY * lateralJitter + sinY * rearOffset);
+    const pz = z + (sinY * lateralJitter + cosY * rearOffset);
+    const py = Math.max(0.05, y + 0.04 + Math.random() * 0.05);
+    
+    mesh.position.set(px, py, pz);
+    mesh.rotation.y = carYaw + (Math.random() - 0.5) * 0.4;
+    scene.add(mesh);
+
+    // Eject backwards with high velocity cone
+    const ejectSpeed = -(14 + Math.random() * 22);
+    const spreadX = (Math.random() - 0.5) * 8;
+    const spreadY = 1.5 + Math.random() * 3.5;
+    
+    const vx = carVx * 0.4 + sinY * ejectSpeed + (-cosY * spreadX);
+    const vz = carVz * 0.4 + cosY * ejectSpeed + (sinY * spreadX);
+    const vy = spreadY;
+
+    sparkParticles.push({
+      mesh,
+      life: 0,
+      maxLife: 0.16 + Math.random() * 0.18,
+      vx, vy, vz,
+      baseY: y
+    });
+  }
+}
+
+function updateSparkParticles(dt) {
+  for (let i = sparkParticles.length - 1; i >= 0; i--) {
+    const sp = sparkParticles[i];
+    sp.life += dt;
+    sp.mesh.position.x += sp.vx * dt;
+    sp.mesh.position.y += sp.vy * dt;
+    sp.mesh.position.z += sp.vz * dt;
+
+    // Gravity & ground bounce
+    sp.vy -= 22 * dt;
+    if (sp.mesh.position.y <= sp.baseY + 0.02) {
+      sp.mesh.position.y = sp.baseY + 0.02;
+      sp.vy = -sp.vy * 0.45; // Ground bounce
+      sp.vx *= 0.82;
+      sp.vz *= 0.82;
+    }
+
+    const t = sp.life / sp.maxLife;
+    const s = Math.max(0.1, 1.0 - t * 0.8);
+    sp.mesh.scale.set(s, s, s);
+
+    if (sp.life >= sp.maxLife) {
+      scene.remove(sp.mesh);
+      sparkParticles.splice(i, 1);
+    }
+  }
+}
+
 // --- 5. AGGRESSIVE PRO LATE-BRAKING PHYSICS AI ---
 const AI_COLORS = [0x38bdf8, 0x10b981, 0xa855f7, 0xf97316, 0xeab308, 0xec4899, 0x6366f1];
+const AI_NAMES = ['L. Hamilton', 'M. Verstappen', 'F. Alonso', 'C. Leclerc', 'L. Norris', 'O. Piastri', 'G. Russell'];
 let aiCars = [];
 let aiSkillMultiplier = 1.0;
 
-function spawnAiGrid(count) {
+// Grand Prix Event State Machine: 'race' | 'quali' | 'weekend'
+let sessionType = 'weekend'; // 'weekend', 'race', 'quali'
+let sessionPhase = 'race'; // 'quali' or 'race'
+let qualiRemainingSec = 120; // 2 minutes shootout
+let qualiResults = [];
+
+function spawnAiGrid(count, customGridOrder = null) {
   aiCars.forEach(ai => scene.remove(ai.visual.root));
   aiCars = [];
 
   for (let i = 0; i < count; i++) {
     const visual = createGT3CarModel(AI_COLORS[i % AI_COLORS.length]);
-    const startIdx = (24 + (i + 1) * 16) % TRACK_SAMPLES;
+    // Grid slot determination: custom grid order if from quali, else staggered
+    let slotRank = i + 1; // 1 = P2, 2 = P3, etc.
+    if (customGridOrder) {
+      const foundIdx = customGridOrder.findIndex(c => c.isAi && c.id === (i + 1));
+      if (foundIdx !== -1) slotRank = foundIdx;
+    }
+    const startIdx = (24 + slotRank * 16) % TRACK_SAMPLES;
     const s = trackSamples[startIdx];
-    const lanePref = ((i % 2 === 0) ? -1 : 1) * 2.8;
+    const lanePref = ((slotRank % 2 === 0) ? -1 : 1) * 2.8;
     const spawnPos = s.pt.clone().addScaledVector(s.right, lanePref);
 
     aiCars.push({
       id: i + 1,
+      name: AI_NAMES[i % AI_NAMES.length],
       visual,
       x: spawnPos.x,
       z: spawnPos.z,
@@ -1045,7 +1132,9 @@ function spawnAiGrid(count) {
       drsActive: false,
       ersBattery: 100,
       ersActive: false,
-      ersCooldown: Math.random() * 2.0
+      ersCooldown: Math.random() * 2.0,
+      bestLapMs: null,
+      lapStartTime: performance.now()
     });
   }
 }
@@ -1074,6 +1163,11 @@ function stepAiPhysics(dt) {
 
     if (nearest.index > 500 && nearest.index < 620) ai.passedHalfway = true;
     if (ai.passedHalfway && ai.lastTrackIdx > 920 && nearest.index < 80) {
+      const aiLapTime = performance.now() - (ai.lapStartTime || performance.now());
+      if (!ai.bestLapMs || aiLapTime < ai.bestLapMs) {
+        ai.bestLapMs = aiLapTime;
+      }
+      ai.lapStartTime = performance.now();
       ai.laps += 1;
       ai.passedHalfway = false;
     }
@@ -1111,7 +1205,32 @@ function stepAiPhysics(dt) {
 
     const apexOffset = THREE.MathUtils.clamp(nearest.sample.curvature * 14.5, -6.8, 6.8);
     const cornerFactor = THREE.MathUtils.clamp(maxCurveAhead * 3.8, 0, 1.0);
-    const desiredLateral = THREE.MathUtils.lerp(ai.lanePref, apexOffset, cornerFactor * 0.85);
+
+    // --- AGGRESSIVE DEFENDING AI: Squeeze the inside line when challenged ---
+    let defensiveOffset = 0;
+    if (cornerFactor > 0.15) {
+      // Find cars closely behind attempting an overtake (distance 3m to 25m)
+      const aiBackX = -Math.sin(ai.yaw);
+      const aiBackZ = -Math.cos(ai.yaw);
+      allRacers.forEach(chaser => {
+        if (chaser === ai) return;
+        const cdx = chaser.x - ai.x;
+        const cdz = chaser.z - ai.z;
+        const distToChaser = Math.hypot(cdx, cdz);
+        const behindDot = cdx * aiBackX + cdz * aiBackZ;
+        
+        // If chaser is directly behind within 24 meters and closing in
+        if (behindDot > 2.0 && distToChaser < 24) {
+          // Inside line direction depends on curve curvature
+          const insideDirection = Math.sign(nearest.sample.curvature || 1);
+          // Defend the inside by shifting lateral positioning towards apex
+          defensiveOffset = insideDirection * (2.8 * aiSkillMultiplier);
+        }
+      });
+    }
+
+    const baselineLateral = THREE.MathUtils.lerp(ai.lanePref, apexOffset, cornerFactor * 0.85);
+    const desiredLateral = THREE.MathUtils.clamp(baselineLateral + defensiveOffset, -7.0, 7.0);
 
     const lookaheadSamples = isStraight ? Math.max(24, Math.round(speedMs * 0.55)) : Math.max(11, Math.round(speedMs * 0.28));
     const targetIdx = (nearest.index + lookaheadSamples) % TRACK_SAMPLES;
@@ -1230,6 +1349,13 @@ function stepAiPhysics(dt) {
     ai.visual.root.position.set(ai.x, wallCheck.pt.y, ai.z);
     ai.visual.root.rotation.y = ai.yaw;
     ai.visual.brakeLightMat.color.setHex(ai.brake > 0.05 ? 0xff1122 : 0x440000);
+
+    // AI Bottoming Out Sparks at high speed / compression / curbs
+    if (speedMs > 52 && (Math.abs(latWall) > (TRACK_HALF_WIDTH - 1.2) || speedMs > 66)) {
+      if (Math.random() < 0.28) {
+        spawnFloorSparks(ai.x, wallCheck.pt.y, ai.z, ai.yaw, ai.vx, ai.vz, 3);
+      }
+    }
 
     if (ai.visual.rearWingFlap) {
       const targetFlap = ai.drsActive ? 0.02 : 0.24;
@@ -1555,7 +1681,113 @@ function evaluateDrsEligibility(carT, speedMs) {
   };
 }
 
+function endQualifyingSession() {
+  if (isRaceFinished) return;
+  isRaceFinished = true;
+
+  // Build ranking based on bestLapMs
+  const allEntries = [
+    { isPlayer: true, name: 'You (Player 1)', bestLapMs: car.bestLapMs || (car.lastLapMs || 92000), color: '#f59e0b' },
+    ...aiCars.map(ai => ({
+      isAi: true,
+      id: ai.id,
+      name: ai.name,
+      bestLapMs: ai.bestLapMs || (88000 / ai.paceFactor + (Math.random() * 2500)),
+      color: '#' + ai.visual.mainHull.material.color.getHexString()
+    }))
+  ];
+
+  allEntries.sort((a, b) => a.bestLapMs - b.bestLapMs);
+  qualiResults = allEntries;
+
+  const modal = document.getElementById('qualiResultsModal');
+  const listEl = document.getElementById('qualiGridList');
+  const subEl = document.getElementById('qualiSubtitle');
+  if (listEl) {
+    listEl.innerHTML = '';
+    const poleTime = allEntries[0].bestLapMs;
+    allEntries.forEach((entry, idx) => {
+      const pos = idx + 1;
+      const isP = entry.isPlayer;
+      const m = Math.floor(entry.bestLapMs / 60000);
+      const s = Math.floor((entry.bestLapMs % 60000) / 1000);
+      const mil = Math.floor(entry.bestLapMs % 1000);
+      const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(mil).padStart(3, '0')}`;
+      const gapStr = idx === 0 ? 'POLE POSITION' : `+${((entry.bestLapMs - poleTime) / 1000).toFixed(3)}s`;
+
+      const row = document.createElement('div');
+      row.className = `flex items-center justify-between p-2 rounded-lg ${isP ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold' : 'bg-slate-900 border border-slate-800 text-slate-300'}`;
+      row.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="w-6 font-black text-center ${idx === 0 ? 'text-amber-400' : 'text-slate-400'}">P${pos}</span>
+          <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${entry.color}"></span>
+          <span>${entry.name}</span>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-white">${timeStr}</div>
+          <div class="text-[10px] text-slate-400">${gapStr}</div>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+  }
+
+  const playerRank = allEntries.findIndex(e => e.isPlayer) + 1;
+  if (subEl) {
+    subEl.textContent = playerRank === 1 ? '🔥 POLE POSITION EARNED! Starting P1 on the Grand Prix Grid!' : `Qualifying finished: You qualified in P${playerRank}! Ready for the Grand Prix race?`;
+  }
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+function startChampionshipRaceFromQuali() {
+  const modal = document.getElementById('qualiResultsModal');
+  if (modal) modal.classList.add('hidden');
+
+  sessionPhase = 'race';
+  const towerBadge = document.getElementById('towerSessionBadge');
+  if (towerBadge) {
+    towerBadge.textContent = 'RACE';
+    towerBadge.className = 'text-[8px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-400/20';
+  }
+
+  const sessionLabel = document.getElementById('sessionModeLabel');
+  if (sessionLabel) sessionLabel.textContent = 'LAP';
+
+  // Position player and AI cars based on qualiResults
+  const playerRank = qualiResults.findIndex(e => e.isPlayer);
+  const playerSlot = playerRank !== -1 ? playerRank : 0;
+  
+  // Starting grid slot spacing (16 samples per slot)
+  const playerStartIdx = (24 + playerSlot * 16) % TRACK_SAMPLES;
+  const s = trackSamples[playerStartIdx];
+  const playerLane = ((playerSlot % 2 === 0) ? -1 : 1) * 2.8;
+  const playerPos = s.pt.clone().addScaledVector(s.right, playerLane);
+
+  car.x = playerPos.x;
+  car.y = s.pt.y;
+  car.z = playerPos.z;
+  car.yaw = Math.atan2(s.tan.x, s.tan.z);
+  car.vx = 0; car.vz = 0; car.yawRate = 0;
+  car.gear = 1; car.laps = 1; car.drsActive = false; car.ersActive = false; car.ersBattery = 100;
+  car.lapStartTime = performance.now();
+  car.passedHalfway = false;
+  repairAndResetDamage();
+
+  spawnAiGrid(aiCars.length, qualiResults);
+
+  isRaceFinished = false;
+  raceStartTime = performance.now();
+  car.lapStartTime = raceStartTime;
+  document.getElementById('lapCountDisplay').textContent = `1 / ${targetRaceLaps}`;
+}
+
 function triggerChequeredFlag() {
+  if (sessionPhase === 'quali') {
+    endQualifyingSession();
+    return;
+  }
+
   if (isRaceFinished) return;
   isRaceFinished = true;
 
@@ -1729,6 +1961,15 @@ function stepPlayerPhysics(dt) {
   const maxWall = WALL_OFFSET - 1.4;
 
   const isOffTrack = Math.abs(latOff) > (TRACK_HALF_WIDTH + KERB_WIDTH + 0.3);
+  const isOnKerb = Math.abs(latOff) >= (TRACK_HALF_WIDTH - 0.2) && Math.abs(latOff) <= (TRACK_HALF_WIDTH + KERB_WIDTH + 0.2);
+
+  // Player Bottoming Out Sparks: Aero plank scrape at high speeds, heavy pitch, or kerb strikes
+  if (speedMs > 50 && (isOnKerb || speedMs > 66 || car.downforceN > 4800)) {
+    if (Math.random() < 0.32) {
+      spawnFloorSparks(car.x, nearest.sample.pt.y, car.z, car.yaw, car.vx, car.vz, 4);
+    }
+  }
+
   if (isOffTrack && Math.abs(latOff) <= maxWall) {
     const gravelBrake = Math.min(1.0, (Math.abs(latOff) - (TRACK_HALF_WIDTH + KERB_WIDTH)) / 2.5);
     car.vx *= Math.max(0.85, 1.0 - gravelBrake * 3.5 * dt);
@@ -2026,6 +2267,9 @@ function updateVisualsAndHUD(dt) {
   aiCars.forEach(ai => { if ((ai.laps + ai.progressT) > pScore) pos++; });
   document.getElementById('racePosDisplay').textContent = `P${pos}/${aiCars.length + 1}`;
 
+  // --- LIVE INTERVAL TIMING TOWER UPDATE ---
+  updateLeaderboardTimingTower();
+
   const ids = ['fl', 'fr', 'rl', 'rr'];
   car.tires.forEach((t, i) => {
     const bar = document.getElementById(`${ids[i]}SlipBar`);
@@ -2049,6 +2293,90 @@ function updateVisualsAndHUD(dt) {
   }
 
   drawMinimap();
+}
+
+function updateLeaderboardTimingTower() {
+  const towerEl = document.getElementById('leaderboardTower');
+  const rowsEl = document.getElementById('timingTowerRows');
+  if (!rowsEl || !towerEl) return;
+
+  const allRacers = [
+    { isPlayer: true, name: 'YOU', score: car.laps + car.progressT, color: '#f59e0b', bestLapMs: car.bestLapMs, tire: car.compound },
+    ...aiCars.map(ai => ({
+      isAi: true,
+      name: ai.name,
+      score: ai.laps + ai.progressT,
+      color: '#' + ai.visual.mainHull.material.color.getHexString(),
+      bestLapMs: ai.bestLapMs,
+      tire: 'soft'
+    }))
+  ];
+
+  if (sessionPhase === 'quali') {
+    // In Qualifying: Rank primarily by best hotlap time
+    allRacers.sort((a, b) => {
+      const aTime = a.bestLapMs || 999999;
+      const bTime = b.bestLapMs || 999999;
+      return aTime - bTime;
+    });
+  } else {
+    // In Race: Rank by track progression score
+    allRacers.sort((a, b) => b.score - a.score);
+  }
+
+  let html = '';
+  const leaderScore = allRacers[0].score;
+  const leaderTime = allRacers[0].bestLapMs;
+  const avgSpeedMs = 52.0; // approximate reference speed for delta calculation
+
+  allRacers.forEach((r, idx) => {
+    const isPlayer = r.isPlayer;
+    let gapDisplay = 'LEADER';
+    
+    if (sessionPhase === 'quali') {
+      if (idx === 0) {
+        gapDisplay = r.bestLapMs ? (formatLapTimeShort(r.bestLapMs)) : 'POLE';
+      } else {
+        if (r.bestLapMs && leaderTime) {
+          gapDisplay = `+${((r.bestLapMs - leaderTime) / 1000).toFixed(2)}s`;
+        } else {
+          gapDisplay = 'NO TIME';
+        }
+      }
+    } else {
+      if (idx > 0) {
+        const distDiffMeters = (leaderScore - r.score) * totalTrackLength;
+        const gapSeconds = Math.max(0.05, distDiffMeters / avgSpeedMs);
+        gapDisplay = `+${gapSeconds.toFixed(2)}s`;
+      }
+    }
+
+    const rowClass = isPlayer ? 'timing-row player-row' : (idx === 0 ? 'timing-row leader-row' : 'timing-row');
+    const tireColor = r.tire === 'soft' ? '🔴' : (r.tire === 'medium' ? '🟡' : (r.tire === 'hard' ? '⚪' : '🟣'));
+
+    html += `
+      <div class="${rowClass}">
+        <div class="flex items-center gap-1.5 overflow-hidden">
+          <span class="font-bold text-[10px] w-4 text-slate-400">P${idx + 1}</span>
+          <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:${r.color}"></span>
+          <span class="truncate max-w-[70px] ${isPlayer ? 'text-amber-400 font-black' : 'text-slate-200 font-semibold'}">${r.name}</span>
+        </div>
+        <div class="flex items-center gap-1.5 font-mono text-[10px]">
+          <span class="text-[8px]">${tireColor}</span>
+          <span class="${idx === 0 ? 'text-purple-300 font-black' : (isPlayer ? 'text-amber-400 font-bold' : 'text-slate-300')}">${gapDisplay}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  rowsEl.innerHTML = html;
+}
+
+function formatLapTimeShort(ms) {
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const mil = Math.floor((ms % 1000) / 100);
+  return `${m}:${String(s).padStart(2, '0')}.${mil}`;
 }
 
 // --- 8. MENU & UI ACTION HANDLERS ---
@@ -2138,6 +2466,9 @@ function startConfiguredRaceSession() {
   const circuitEl = document.getElementById('menuCircuitSelect');
   const chosen = circuitEl ? circuitEl.value : 'solaris';
 
+  const modeEl = document.getElementById('menuEventMode');
+  sessionType = modeEl ? modeEl.value : 'weekend';
+
   const aiCountEl = document.getElementById('menuAiCount');
   const aiCount = aiCountEl ? parseInt(aiCountEl.value, 10) : 5;
 
@@ -2162,7 +2493,30 @@ function startConfiguredRaceSession() {
 
   repairAndResetDamage();
   resetCarToStart();
-  spawnAiGrid(aiCount);
+
+  const towerBadge = document.getElementById('towerSessionBadge');
+  const sessionLabel = document.getElementById('sessionModeLabel');
+
+  if (sessionType === 'weekend' || sessionType === 'quali') {
+    sessionPhase = 'quali';
+    qualiRemainingSec = 90; // 90 seconds shootout
+    if (towerBadge) {
+      towerBadge.textContent = 'QUALIFYING';
+      towerBadge.className = 'text-[8px] font-mono font-bold text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-400/20';
+    }
+    if (sessionLabel) sessionLabel.textContent = 'TIME LEFT';
+    document.getElementById('lapCountDisplay').textContent = `${Math.ceil(qualiRemainingSec)}s`;
+    spawnAiGrid(aiCount);
+  } else {
+    sessionPhase = 'race';
+    if (towerBadge) {
+      towerBadge.textContent = 'RACE';
+      towerBadge.className = 'text-[8px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-400/20';
+    }
+    if (sessionLabel) sessionLabel.textContent = 'LAP';
+    document.getElementById('lapCountDisplay').textContent = `1 / ${targetRaceLaps}`;
+    spawnAiGrid(aiCount);
+  }
 
   isRaceFinished = false;
   raceStartTime = performance.now();
@@ -2170,6 +2524,9 @@ function startConfiguredRaceSession() {
 
   const finishModal = document.getElementById('chequeredModal');
   if (finishModal) finishModal.classList.add('hidden');
+
+  const qualiModal = document.getElementById('qualiResultsModal');
+  if (qualiModal) qualiModal.classList.add('hidden');
 
   const stallBanner = document.getElementById('engineStallBanner');
   if (stallBanner) stallBanner.classList.add('hidden');
@@ -2233,6 +2590,14 @@ document.getElementById('finishMenuBtn').addEventListener('click', () => {
   toggleMainMenu();
 });
 
+const qualiToRaceBtn = document.getElementById('qualiToRaceBtn');
+if (qualiToRaceBtn) qualiToRaceBtn.addEventListener('click', startChampionshipRaceFromQuali);
+const qualiRestartBtn = document.getElementById('qualiRestartBtn');
+if (qualiRestartBtn) qualiRestartBtn.addEventListener('click', () => {
+  document.getElementById('qualiResultsModal').classList.add('hidden');
+  startConfiguredRaceSession();
+});
+
 document.getElementById('setupSteerLock').addEventListener('input', (e) => {
   car.steerLockScale = parseInt(e.target.value, 10) / 100;
   document.getElementById('valSteerLock').textContent = `${e.target.value}%`;
@@ -2293,6 +2658,19 @@ function animate(now) {
   evaluateAdaptivePerformance(dt);
 
   if (!isMenuOpen && !isRaceFinished) {
+    if (sessionPhase === 'quali') {
+      qualiRemainingSec = Math.max(0, qualiRemainingSec - dt);
+      const lapCountDisplay = document.getElementById('lapCountDisplay');
+      if (lapCountDisplay) {
+        const qm = Math.floor(qualiRemainingSec / 60);
+        const qs = Math.floor(qualiRemainingSec % 60);
+        lapCountDisplay.textContent = `${qm}:${String(qs).padStart(2, '0')}`;
+      }
+      if (qualiRemainingSec <= 0) {
+        endQualifyingSession();
+      }
+    }
+
     if (isPitFreezing) {
       pitFreezeRemaining -= dt;
       car.vx = 0;
@@ -2323,6 +2701,7 @@ function animate(now) {
   }
 
   updateSmokePuffs(dt);
+  updateSparkParticles(dt);
   updateVisualsAndHUD(dt);
   renderer.render(scene, camera);
 }

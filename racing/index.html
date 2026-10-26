@@ -58,7 +58,15 @@
 
           <div class="grid grid-cols-2 gap-2.5">
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">2. Total Race Laps</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">2. Event Session Mode</label>
+              <select id="menuEventMode" class="w-full bg-slate-950 border border-amber-500/60 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
+                <option value="weekend" selected>🏆 GP Weekend (Qualifying + Race)</option>
+                <option value="race">🏁 Direct Race Only</option>
+                <option value="quali">⏱️ Solo Qualifying Shootout</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">3. Total Race Laps</label>
               <select id="menuRaceLaps" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white">
                 <option value="1">1 Lap (Sprint Shootout)</option>
                 <option value="3" selected>3 Laps (Championship)</option>
@@ -66,21 +74,21 @@
                 <option value="10">10 Laps (Endurance)</option>
               </select>
             </div>
-            <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">3. AI Difficulty / Skill</label>
-              <select id="menuAiSkill" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white">
-                <option value="0.90">Clubman (90%)</option>
-                <option value="1.00" selected>Pro GT3 (100% Late-Brake)</option>
-                <option value="1.08">Alien (108% Hyper Aggressive)</option>
-              </select>
-            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">4. AI Difficulty / Skill</label>
+            <select id="menuAiSkill" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white">
+              <option value="0.90">Clubman (90%)</option>
+              <option value="1.00" selected>Pro GT3 (100% Late-Brake & Defending)</option>
+              <option value="1.08">Alien (108% Hyper Aggressive)</option>
+            </select>
           </div>
         </div>
 
         <div class="space-y-3.5">
           <div class="grid grid-cols-2 gap-2.5">
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">4. AI Grid Size</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">5. AI Grid Size</label>
               <select id="menuAiCount" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
                 <option value="0">0 (Solo Hotlap)</option>
                 <option value="3">3 Opponents</option>
@@ -89,7 +97,7 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">5. Tire Compound</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">6. Tire Compound</label>
               <select id="menuCompound" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
                 <option value="soft" selected>🔴 Soft Slick (Max Grip)</option>
                 <option value="medium">🟡 Medium Slick</option>
@@ -101,14 +109,14 @@
 
           <div class="grid grid-cols-2 gap-2.5">
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">6. 3D Racing Line</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">7. 3D Racing Line</label>
               <select id="menuRacingLine" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
                 <option value="on">🟢 Line Enabled (On)</option>
                 <option value="off" selected>⚪ Authentic Line (Off)</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">7. Damage Realism</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">8. Damage Realism</label>
               <select id="menuDamageMode" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
                 <option value="simulation" selected>💥 Sim Damage & Engine Stall</option>
                 <option value="arcade">🛡️ Arcade (Visual Only)</option>
@@ -118,7 +126,7 @@
 
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="block text-xs font-bold uppercase tracking-wider text-amber-400">8. Graphics & Device Performance</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-amber-400">9. Graphics & Device Performance</label>
               <span id="detectedGpuBadge" class="text-[10px] font-mono text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">DETECTING...</span>
             </div>
             <select id="menuGraphicsTier" class="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-2.5 py-2 text-xs sm:text-sm font-semibold text-white">
@@ -156,9 +164,38 @@
             Resume
           </button>
           <button id="startRaceBtn" class="px-6 py-2.5 sm:px-7 sm:py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm tracking-wide shadow-xl shadow-amber-500/25 transition">
-            🏁 START CHAMPIONSHIP RACE →
+            🏁 START EVENT →
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Qualifying Results & Grid Transition Modal -->
+  <div id="qualiResultsModal" class="hidden fixed inset-0 menu-bg z-50 flex items-center justify-center p-4">
+    <div class="banner-anim max-w-lg w-full bg-slate-900 border-2 border-sky-400/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
+      <div class="w-full h-3 bg-gradient-to-r from-sky-400 via-emerald-400 to-amber-400 rounded-t-xl mb-4"></div>
+      <div class="text-4xl mb-1">⏱️</div>
+      <h2 class="text-2xl sm:text-3xl font-black text-sky-400 tracking-tight mb-1">
+        QUALIFYING SHOOTOUT COMPLETE
+      </h2>
+      <div id="qualiSubtitle" class="text-sm font-bold text-slate-300 mb-4">
+        Starting Grid Determined for the Championship Grand Prix
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 mb-5 max-h-56 overflow-y-auto">
+        <div id="qualiGridList" class="space-y-1.5 font-mono text-xs">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="flex gap-3 justify-center">
+        <button id="qualiToRaceBtn" class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs sm:text-sm tracking-wide shadow-lg transition">
+          🚦 PROCEED TO GRID & RACE →
+        </button>
+        <button id="qualiRestartBtn" class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm transition">
+          ↺ Retry Quali
+        </button>
       </div>
     </div>
   </div>
@@ -248,7 +285,7 @@
           <div id="racePosDisplay" class="font-mono text-xs sm:text-sm font-black text-amber-400">P1/6</div>
         </div>
         <div class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-0.5 text-center">
-          <div class="text-[8px] text-slate-400 uppercase font-bold">LAP</div>
+          <div id="sessionModeLabel" class="text-[8px] text-slate-400 uppercase font-bold">LAP</div>
           <div id="lapCountDisplay" class="font-mono text-xs sm:text-sm font-black text-white">1 / 3</div>
         </div>
       </div>
@@ -281,6 +318,19 @@
       <button id="setupToggleBtn" class="hidden sm:inline-flex bg-amber-500 hover:bg-amber-400 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-lg transition">
         🔧 Setup (Tab)
       </button>
+    </div>
+  </div>
+
+  <!-- Live Interval Leaderboard Timing Tower (Top Left Floating) -->
+  <div id="leaderboardTower" class="fixed top-16 left-3.5 z-20 hud-glass rounded-xl p-2 timing-tower hidden sm:block pointer-events-auto">
+    <div class="flex items-center justify-between border-b border-slate-700/70 pb-1 mb-1.5 px-1">
+      <span class="text-[9px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+        <span>⏱️</span> LIVE INTERVALS
+      </span>
+      <span id="towerSessionBadge" class="text-[8px] font-mono font-bold text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-400/20">RACE</span>
+    </div>
+    <div id="timingTowerRows" class="space-y-0.5">
+      <!-- Dynamic live driver rows rendered here -->
     </div>
   </div>
 
