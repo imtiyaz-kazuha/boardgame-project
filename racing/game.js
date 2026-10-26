@@ -962,7 +962,7 @@ function createGT3CarModel(hexColor) {
   });
 
   scene.add(root);
-  return { root, bodyPivot, mainHull, cockpit, splitter, rearWingFlap, brakeLightMat, wheels };
+  return { root, bodyPivot, mainHull, cockpit, splitter, rearWingFlap, brakeLightMat, wheels, paintMat, hexColor };
 }
 
 const playerVisual = createGT3CarModel(0xe11d48);
@@ -1693,7 +1693,7 @@ function endQualifyingSession() {
       id: ai.id,
       name: ai.name,
       bestLapMs: ai.bestLapMs || (88000 / ai.paceFactor + (Math.random() * 2500)),
-      color: '#' + ai.visual.mainHull.material.color.getHexString()
+      color: '#' + ai.visual.paintMat.color.getHexString()
     }))
   ];
 
@@ -2306,7 +2306,7 @@ function updateLeaderboardTimingTower() {
       isAi: true,
       name: ai.name,
       score: ai.laps + ai.progressT,
-      color: '#' + ai.visual.mainHull.material.color.getHexString(),
+      color: '#' + ((ai.visual && ai.visual.paintMat) ? ai.visual.paintMat.color.getHexString() : '38bdf8'),
       bestLapMs: ai.bestLapMs,
       tire: 'soft'
     }))
@@ -2482,7 +2482,7 @@ function startConfiguredRaceSession() {
   const wantLine = lineEl ? (lineEl.value === 'on') : false;
 
   const compoundEl = document.getElementById('menuCompound');
-  if (compoundEl) {
+  if (compoundEl && compoundEl.value) {
     car.compound = compoundEl.value;
     const badge = document.getElementById('compoundBadge');
     if (badge) badge.textContent = car.compound.toUpperCase();
